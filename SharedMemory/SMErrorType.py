@@ -1,6 +1,6 @@
 '''
-File: test_client.py
-Created Date: Wednesday, July 3rd 2020, 8:16:57 pm
+File: SMErrorType.py
+Created Date: Thursday, July 4th 2020, 9:36:57 pm
 Author: Zentetsu
 
 ----
@@ -31,17 +31,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
-2020-07-02	Zen	Adding test with json file
-2020-07-01	Zen	Creating file
+2020-07-02	Zen	Creating file
 '''
 
 
-from context import Client
+class SMErrorType(Exception):
+    def __init__(self, type, message=" is not accepted."):
+        self.type = type
+        self.message = str(self.type) + message
+        super().__init__(self.message)
 
-c = Client("test")
-print(c)
-c.stop()
-
-c = Client("test", path="tests/test.json")
-print(c)
-c.stop()
+class MultiInput(Exception):
+    def __init__(self, message="value or path must be None."):
+        self.message = message
+        super().__init__(self.message)

@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Wed Jul 01 2020
+Last Modified: Thu Jul 02 2020
 Modified By: Zentetsu
 
 ----
@@ -31,73 +31,74 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-02	Zen	Adding exception and json reader
 2020-07-01	Zen	Creating file and drafting class
 '''
 
 
+from .SMErrorType import SMErrorType, MultiInput
 from multiprocessing import shared_memory
+import json
 
 
 class Client:
     def __init__(self, name, value=None, path=None, size=10):
         if value is None and path is None or value is not None and path is not None:
-            print("ERROR")
-            exit(1)
-            #TODO Adding try catch
+            raise MultiInput
         elif value is None:
-            self.by_path = True
-            self.value = self._InitValueByJSON(path)
+            self.value = self._initValueByJSON(path)
         else:
-            self.by_path = False
             self.value = value
             self.size = size
 
         self.name = name
 
-        self._InitSharedMemory()
+        self._initSharedMemory()
 
-    def _InitValueByJSON(self, path):
-        pass
-        #TODO JSON reader
+    def _initValueByJSON(self, path):
+        json_file = open(path)        
+        value = json.load(json_file)
+        json_file.close()
 
-    def _InitSharedMemory(self):
-        if self.by_path:
-            pass
-        elif self.value is dict or self.value is list:
-            print("ERROR")
-            exit(1)
-            #TODO Adding try catch
+        return value
+
+    def _checkValue(self, value):
+        if value is str:
+            value = " " * self.size
+        elif type(value) is str:
+            value = value
+        elif value is int or type(value) is int:
+            value = 0
+        elif value is float or type(value) is float:
+            value = 0.0
+        elif value is bool or type(value) is bool:
+            value = False
+        elif value is dict or type(value) is dict:
+            value = json.dumps(value)
+        else:
+            raise SMErrorType(list)
+
+        return value     
+
+    def _initSharedMemory(self):
+        if self.value is dict or self.value is list:
+            raise SMErrorType(self.value)
         elif type(self.value) is type:
-            if self.value is str:
-                self.value = " " * self.size
-            elif self.value is int:
-                self.value = 0
-            elif self.value is float:
-                self.value = 0.0
+            self.value = self._checkValue(self.value)
+        elif type(self.value) is list:
+            if True in [type(x) is list for x in self.value]:
+                raise SMErrorType(list)
             else:
-                self.value = False
-        elif type(self.value) is dict:
-            print("ERROR")
-            exit(1)
-            #TODO Adding try catch
-        elif type(self.value) is list and True in [type(x) is list for x in self.value]:
-            print("ERROR")
-            exit(1)
-            #TODO Adding try catch
+                for i in range(0, len(self.value)):
+                    self.value[i] = self._checkValue(self.value[i])
 
         self.sl = shared_memory.ShareableList(self.value, name=self.name)
 
     def close(self):
-        try:
-            self.sl.shm.close()
-        except Exception:
-            pass
+        self.sl.shm.close()
 
     def unlink(self):
-        try:
-            self.sl.shm.unlink()
-        except Exception:
-            pass
+        self.sl.shm.unlink()
 
     def stop(self):
         self.close()

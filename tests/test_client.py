@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Fri Jul 03 2020
+Last Modified: Sat Jul 04 2020
 Modified By: Zentetsu
 
 ----
@@ -85,16 +85,16 @@ def test_list2():
     c = Client("test", [int, bool, str])
     assert type(c.getValue()) is list
     assert type(c.getValue()[0]) is int
-    assert type(c.getValue()[0]) is bool
-    assert type(c.getValue()[0]) is str
+    assert type(c.getValue()[1]) is bool
+    assert type(c.getValue()[2]) is str
     c.stop()
 
 def test_list3():
     c = Client("test", [int, 10.2, str])
     assert type(c.getValue()) is list
     assert type(c.getValue()[0]) is int
-    assert type(c.getValue()[0]) is float
-    assert type(c.getValue()[0]) is str
+    assert type(c.getValue()[1]) is float
+    assert type(c.getValue()[2]) is str
     c.stop()
 
 def test_file():

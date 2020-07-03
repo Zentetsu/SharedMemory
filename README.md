@@ -1,3 +1,3 @@
 # SharedMemory
 
-![Upload Python Package](https://github.com/Zentetsu/SharedMemory/workflows/Upload%20Python%20Package/badge.svg)
+![Python package](https://github.com/Zentetsu/SharedMemory/workflows/Python%20package/badge.svg?branch=master)

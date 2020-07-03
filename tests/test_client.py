@@ -39,48 +39,59 @@ HISTORY:
 
 from SharedMemory.Client import Client
 
-c = Client("test", "azerty")
-assert type(c.getValue()) is str
-c.stop()
+def test_str():
+    c = Client("test", "azerty")
+    assert type(c.getValue()) is str
+    c.stop()
 
-c = Client("test", 1)
-assert type(c.getValue()) is int
-assert c.getValue() == 1
-c.stop()
+def test_int():
+    c = Client("test", 1)
+    assert type(c.getValue()) is int
+    assert c.getValue() == 1
+    c.stop()
 
-c = Client("test", 1.2)
-assert type(c.getValue()) is float
-assert c.getValue() == 1.2
-c.stop()
+def test_float():
+    c = Client("test", 1.2)
+    assert type(c.getValue()) is float
+    assert c.getValue() == 1.2
+    c.stop()
 
-c = Client("test", True)
-assert type(c.getValue()) is bool
-assert c.getValue()
-c.stop()
+def test_bool():
+    c = Client("test", True)
+    assert type(c.getValue()) is bool
+    assert c.getValue()
+    c.stop()
 
-c = Client("test", {'a': 1})
-assert type(c.getValue()) is dict
-assert c.getValue()['a'] == 1
-c.stop()
+def test_dict1():
+    c = Client("test", {'a': 1})
+    assert type(c.getValue()) is dict
+    assert c.getValue()['a'] == 1
+    c.stop()
 
-c = Client("test", [0, 1])
-assert type(c.getValue()) is list
-assert c.getValue()[0] == 0
-assert c.getValue()[1] == 1
-c.stop()
+def test_list1():
+    c = Client("test", [0, 1])
+    assert type(c.getValue()) is list
+    assert c.getValue()[0] == 0
+    assert c.getValue()[1] == 1
+    c.stop()
 
-# c = Client("test", (0, 1))
-# assert type(c.getValue()) is int
-# c.stop()
+# def test_1():
+#     # c = Client("test", (0, 1))
+#     # assert type(c.getValue()) is int
+#     # c.stop()
+#     pass
 
-c = Client("test", [int, bool, str])
-assert type(c.getValue()) is list
-c.stop()
+def test_list2():
+    c = Client("test", [int, bool, str])
+    assert type(c.getValue()) is list
+    c.stop()
 
-c = Client("test", [int, 10.2, str])
-assert type(c.getValue()) is list
-c.stop()
+def test_list3():
+    c = Client("test", [int, 10.2, str])
+    assert type(c.getValue()) is list
+    c.stop()
 
-c = Client("test", path="./tests/test.json")
-assert type(c.getValue()) is dict
-c.stop()
+def test_file():
+    c = Client("test", path="./tests/test.json")
+    assert type(c.getValue()) is dict
+    c.stop()

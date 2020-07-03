@@ -43,7 +43,6 @@ while 1:
         s = Server("test")
         print(s)
         s.stop()
-        input()
     except:
         break
 

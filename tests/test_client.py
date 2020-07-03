@@ -41,50 +41,40 @@ from SharedMemory.Client import Client
 
 c = Client("test", "azerty")
 print(c)
-input()
 c.stop()
 
 c = Client("test", 1)
 print(c)
-input()
 c.stop()
 
 c = Client("test", 1.2)
 print(c)
-input()
 c.stop()
 
 c = Client("test", True)
 print(c)
-input()
 c.stop()
 
 c = Client("test", {'a': 1})
 print(c)
-input()
 c.stop()
 
 c = Client("test", [0, 1])
 print(c)
-input()
 c.stop()
 
 c = Client("test", (0, 1))
 print(c)
-input()
 c.stop()
 
 c = Client("test", [int, bool, str])
 print(c)
-input()
 c.stop()
 
 c = Client("test", [int, 10.2, str])
 print(c)
-input()
 c.stop()
 
 c = Client("test", path="./tests/test.json")
 print(c)
-input()
 c.stop()

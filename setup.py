@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Fri Jul 03 2020
+Last Modified: Sat Jul 04 2020
 Modified By: Zentetsu
 
 ----
@@ -39,7 +39,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='SharedMemory',
-    version='1.0.0.a0',
+    version='1.0.0.a1',
     packages=find_packages(exclude=['tests*']),
     license='GPLv3',
     description='SharedMemory encapsulation',

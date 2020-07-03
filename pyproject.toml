@@ -1,9 +1,0 @@
-[build-system]
-requires = ["flit_core >=2,<4"]
-build-backend = "flit_core.buildapi"
-
-[tool.flit.metadata]
-module = "SharedMemory"
-author = "Zentetsu"
-classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)"]
-

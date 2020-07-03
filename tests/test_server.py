@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Wed Jul 01 2020
+Last Modified: Fri Jul 03 2020
 Modified By: Zentetsu
 
 ----
@@ -31,8 +31,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-03	Zen	Updating test file
 2020-07-01	Zen	Creating file
 '''
 
 
 from context import Server
+
+while 1:
+    try:
+        s = Server("test")
+        print(s)
+        s.stop()
+        input()
+    except:
+        break
+
+# s = Server("test")
+# print(s)
+# s.stop()

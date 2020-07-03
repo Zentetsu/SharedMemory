@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Jul 02 2020
+Last Modified: Fri Jul 03 2020
 Modified By: Zentetsu
 
 ----
@@ -36,5 +36,3 @@ HISTORY:
 
 
 from .Client import Client
-from .Server import Server
-from .SMErrorType import SMErrorType

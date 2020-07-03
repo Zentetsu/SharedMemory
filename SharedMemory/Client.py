@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Jul 02 2020
+Last Modified: Fri Jul 03 2020
 Modified By: Zentetsu
 
 ----
@@ -31,14 +31,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-03	Zen	Data simplification
 2020-07-02	Zen	Adding exception and json reader
 2020-07-01	Zen	Creating file and drafting class
 '''
 
 
-from .SMErrorType import SMErrorType, MultiInput
+from .SMError import SMErrorType, SMSizeError, MultiInput
 from multiprocessing import shared_memory
 import json
+import sys
 
 
 class Client:
@@ -51,6 +53,8 @@ class Client:
             self.value = value
             self.size = size
 
+
+        self.type = type(self.value)
         self.name = name
 
         self._initSharedMemory()
@@ -65,40 +69,50 @@ class Client:
     def _checkValue(self, value):
         if value is str:
             value = " " * self.size
-        elif type(value) is str:
-            value = value
-        elif value is int or type(value) is int:
+        elif value is int:
             value = 0
-        elif value is float or type(value) is float:
+        elif value is float:
             value = 0.0
-        elif value is bool or type(value) is bool:
+        elif value is bool:
             value = False
-        elif value is dict or type(value) is dict:
-            value = json.dumps(value)
-        else:
-            raise SMErrorType(list)
+        elif value is dict or value is list:
+            raise SMErrorType(value)
 
-        return value     
+        return value
 
     def _initSharedMemory(self):
-        if self.value is dict or self.value is list:
-            raise SMErrorType(self.value)
-        elif type(self.value) is type:
-            self.value = self._checkValue(self.value)
-        elif type(self.value) is list:
-            if True in [type(x) is list for x in self.value]:
-                raise SMErrorType(list)
-            else:
-                for i in range(0, len(self.value)):
-                    self.value[i] = self._checkValue(self.value[i])
+        if type(self.value) is list and type in [type(e) for e in self.value]:
+            for i in range(0, len(self.value)):
+                self.value[i] = self._checkValue(self.value[i])
 
-        self.sl = shared_memory.ShareableList(self.value, name=self.name)
+        self.size = sys.getsizeof(self.value)
+
+        self.sl = shared_memory.ShareableList([json.dumps(self.value)], name=self.name)
+
+    def getValue(self):
+        return self.value
+
+    def updateValue(self, n_value):
+        if type(n_value) is not self.type:
+            raise SMErrorType
+
+        if sys.getsizeof(n_value) > self.size:
+            raise SMSizeError
+
+        self.value = n_value
+
 
     def close(self):
-        self.sl.shm.close()
-
+        try:
+            self.sl.shm.close()
+        except FileNotFoundError:
+            pass
+        
     def unlink(self):
-        self.sl.shm.unlink()
+        try:
+            self.sl.shm.unlink()
+        except FileNotFoundError:
+            pass
 
     def stop(self):
         self.close()

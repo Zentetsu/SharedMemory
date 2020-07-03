@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Jul 02 2020
+Last Modified: Fri Jul 03 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-03	Zen	Adding new exception
 2020-07-02	Zen	Creating file
 '''
 
@@ -41,7 +42,22 @@ class SMErrorType(Exception):
         self.message = str(self.type) + message
         super().__init__(self.message)
 
+class SMSizeError(Exception):
+    def __init__(self, message="size of new value exceeds the previous one."):
+        self.type = type
+        self.message = str(self.type) + message
+        super().__init__(self.message)
+
 class MultiInput(Exception):
-    def __init__(self, message="value or path must be None."):
+    def __init__(self, message="value xor path must be None."):
         self.message = message
+        super().__init__(self.message)
+
+class SMNotDefined(Exception):
+    def __init__(self, name, message=None):
+        if message is None:
+            self.message = "shared memory called '" + name + "' is not defined."
+        else: 
+            self.message = message
+
         super().__init__(self.message)

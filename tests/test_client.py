@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Jul 02 2020
+Last Modified: Fri Jul 03 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-03	Zen	Adding new tests
 2020-07-02	Zen	Adding test with json file
 2020-07-01	Zen	Creating file
 '''
@@ -38,10 +39,52 @@ HISTORY:
 
 from context import Client
 
-c = Client("test")
+c = Client("test", "azerty")
 print(c)
+input()
 c.stop()
 
-c = Client("test", path="tests/test.json")
+c = Client("test", 1)
 print(c)
+input()
+c.stop()
+
+c = Client("test", 1.2)
+print(c)
+input()
+c.stop()
+
+c = Client("test", True)
+print(c)
+input()
+c.stop()
+
+c = Client("test", {'a': 1})
+print(c)
+input()
+c.stop()
+
+c = Client("test", [0, 1])
+print(c)
+input()
+c.stop()
+
+c = Client("test", (0, 1))
+print(c)
+input()
+c.stop()
+
+c = Client("test", [int, bool, str])
+print(c)
+input()
+c.stop()
+
+c = Client("test", [int, 10.2, str])
+print(c)
+input()
+c.stop()
+
+c = Client("test", path="./tests/test.json")
+print(c)
+input()
 c.stop()

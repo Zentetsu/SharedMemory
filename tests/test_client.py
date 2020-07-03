@@ -37,7 +37,7 @@ HISTORY:
 '''
 
 
-from context import Client
+from SharedMemory.Client import Client
 
 c = Client("test", "azerty")
 print(c)

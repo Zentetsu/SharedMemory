@@ -36,7 +36,7 @@ HISTORY:
 '''
 
 
-from context import Server
+from SharedMemory.Server import Server
 
 while 1:
     try:

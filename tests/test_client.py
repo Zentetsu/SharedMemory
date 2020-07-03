@@ -40,41 +40,47 @@ HISTORY:
 from SharedMemory.Client import Client
 
 c = Client("test", "azerty")
-print(c)
+assert type(c.getValue()) is str
 c.stop()
 
 c = Client("test", 1)
-print(c)
+assert type(c.getValue()) is int
+assert c.getValue() == 1
 c.stop()
 
 c = Client("test", 1.2)
-print(c)
+assert type(c.getValue()) is float
+assert c.getValue() == 1.2
 c.stop()
 
 c = Client("test", True)
-print(c)
+assert type(c.getValue()) is bool
+assert c.getValue()
 c.stop()
 
 c = Client("test", {'a': 1})
-print(c)
+assert type(c.getValue()) is dict
+assert c.getValue()['a'] == 1
 c.stop()
 
 c = Client("test", [0, 1])
-print(c)
+assert type(c.getValue()) is list
+assert c.getValue()[0] == 0
+assert c.getValue()[1] == 1
 c.stop()
 
-c = Client("test", (0, 1))
-print(c)
-c.stop()
+# c = Client("test", (0, 1))
+# assert type(c.getValue()) is int
+# c.stop()
 
 c = Client("test", [int, bool, str])
-print(c)
+assert type(c.getValue()) is list
 c.stop()
 
 c = Client("test", [int, 10.2, str])
-print(c)
+assert type(c.getValue()) is list
 c.stop()
 
 c = Client("test", path="./tests/test.json")
-print(c)
+assert type(c.getValue()) is dict
 c.stop()

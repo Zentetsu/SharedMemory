@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-03	Zen	Correction of data acquisition
 2020-07-03	Zen	Data simplification
 2020-07-02	Zen	Adding exception and json reader
 2020-07-01	Zen	Creating file and drafting class
@@ -90,7 +91,7 @@ class Client:
         self.sl = shared_memory.ShareableList([json.dumps(self.value)], name=self.name)
 
     def getValue(self):
-        return self.value
+        return json.loads(self.sl[0])
 
     def updateValue(self, n_value):
         if type(n_value) is not self.type:
@@ -99,8 +100,7 @@ class Client:
         if sys.getsizeof(n_value) > self.size:
             raise SMSizeError
 
-        self.value = n_value
-
+        self.sl[0] = json.dumps(n_value)
 
     def close(self):
         try:
@@ -119,6 +119,6 @@ class Client:
         self.unlink()
 
     def __repr__(self):
-        s = "Client: " + self.name + "\n" + "Value: " + self.value.__repr__()
+        s = "Client: " + self.name + "\n" + "Value: " + json.loads(self.sl[0]).__repr__()
     
         return s

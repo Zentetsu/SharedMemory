@@ -31,8 +31,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-03	Zen	Adding import for Server
 2020-07-01	Zen	Creating file
 '''
 
 
 from .Client import Client
+from .Server import Server

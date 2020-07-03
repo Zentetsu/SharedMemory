@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-03	Zen	Correction of data acquisition
 2020-07-03	Zen	Server implementation
 2020-07-01	Zen	Creating file
 '''
@@ -50,11 +51,11 @@ class Server:
         except FileNotFoundError:
             raise SMNotDefined(self.name)
 
-        self.value = self.sl
-        self.size = sys.getsizeof(json.loads(self.value[0]))
+        self.size = sys.getsizeof(json.loads(self.sl[0]))
+        self.type = type(json.loads(self.sl[0]))
 
     def getValue(self):
-        return json.loads(self.value[0])
+        return json.loads(self.sl[0])
 
     def updateValue(self, n_value):
         if type(n_value) is not self.type:
@@ -63,7 +64,7 @@ class Server:
         if sys.getsizeof(n_value) > self.size:
             raise SMSizeError
 
-        self.value = n_value
+        self.sl[0] = json.dumps(n_value)
 
     def close(self):
         try:
@@ -82,6 +83,6 @@ class Server:
         self.unlink()
 
     def __repr__(self):
-        s = "Server: " + self.name + "\n" + "Value: " + json.loads(self.value[0]).__repr__()
+        s = "Server: " + self.name + "\n" + "Value: " + json.loads(self.sl[0]).__repr__()
     
         return s

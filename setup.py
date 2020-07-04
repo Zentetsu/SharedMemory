@@ -40,11 +40,13 @@ from setuptools import setup, find_packages
 setup(
     name='SharedMemory',
     version='1.1.0.a0',
+    author='Zentetsu',
     packages=find_packages(exclude=['tests*']),
     license='GPLv3',
     description='SharedMemory encapsulation',
     long_description=open('README.md').read(),
+    long_description_content_type="text/markdown",
     install_requires=[],
     url='https://github.com/Zentetsu/SharedMemory',
-    author='Zentetsu'
+    python_requires='>=3.8',
 )

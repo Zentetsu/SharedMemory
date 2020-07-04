@@ -113,12 +113,14 @@ class Client:
     def close(self):
         try:
             self.sl.shm.close()
+            self.sl_tmx.shm.close()
         except FileNotFoundError:
             pass
         
     def unlink(self):
         try:
             self.sl.shm.unlink()
+            self.sl_tmx.shm.unlink()
         except FileNotFoundError:
             pass
 

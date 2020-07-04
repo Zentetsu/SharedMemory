@@ -41,11 +41,12 @@ HISTORY:
 from .SMError import SMErrorType, SMSizeError, MultiInput
 from multiprocessing import shared_memory
 import json
+import time
 import sys
 
 
 class Client:
-    def __init__(self, name, value=None, path=None, size=10):
+    def __init__(self, name, value=None, path=None, size=10, timeout=1):
         if value is None and path is None or value is not None and path is not None:
             raise MultiInput
         elif value is None:
@@ -54,7 +55,7 @@ class Client:
             self.value = value
             self.size = size
 
-
+        self.timeout = timeout
         self.type = type(self.value)
         self.name = name
 
@@ -95,9 +96,12 @@ class Client:
         return json.loads(self.sl[0])
 
     def updateValue(self, n_value):
-        if json.loads(self.sl_tmx[0]):
-            print("WARNING: MUTEX lock.")
-            return
+        start = time.time()
+        
+        while json.loads(self.sl_tmx[0]):
+            if (time.time() - start) > self.timeout:
+                print("WARNING: timeout MUTEX.")
+                return
         
         self.sl_tmx[0] = json.dumps(True)
 

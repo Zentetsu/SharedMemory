@@ -39,11 +39,12 @@ HISTORY:
 from .SMError import SMErrorType, SMSizeError, SMNotDefined
 from multiprocessing import shared_memory
 import json
+import time
 import sys
 
 
 class Server:
-    def __init__(self, name):
+    def __init__(self, name, timeout=10):
         self.name = name
 
         try:
@@ -52,6 +53,7 @@ class Server:
         except FileNotFoundError:
             raise SMNotDefined(self.name)
 
+        self.timeout = timeout
         self.size = sys.getsizeof(json.loads(self.sl[0]))
         self.type = type(json.loads(self.sl[0]))
 
@@ -59,10 +61,12 @@ class Server:
         return json.loads(self.sl[0])
 
     def updateValue(self, n_value):
-        print(json.loads(self.sl_tmx[0]), type(json.loads(self.sl_tmx[0])))
-        if json.loads(self.sl_tmx[0]):
-            print("WARNING: MUTEX lock.")
-            return
+        start = time.time()
+        
+        while json.loads(self.sl_tmx[0]):
+            if (time.time() - start) > self.timeout:
+                print("WARNING: timeout MUTEX.")
+                return
         
         self.sl_tmx[0] = json.dumps(True)
 

@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Fri Jul 03 2020
+Last Modified: Sat Jul 04 2020
 Modified By: Zentetsu
 
 ----
@@ -89,11 +89,18 @@ class Client:
         self.size = sys.getsizeof(self.value)
 
         self.sl = shared_memory.ShareableList([json.dumps(self.value)], name=self.name)
+        self.sl_tmx = shared_memory.ShareableList([json.dumps(False)], name=self.name + "_tmx")
 
     def getValue(self):
         return json.loads(self.sl[0])
 
     def updateValue(self, n_value):
+        if json.loads(self.sl_tmx[0]):
+            print("WARNING: MUTEX lock.")
+            return
+        
+        self.sl_tmx[0] = json.dumps(True)
+
         if type(n_value) is not self.type:
             raise SMErrorType
 
@@ -101,6 +108,7 @@ class Client:
             raise SMSizeError
 
         self.sl[0] = json.dumps(n_value)
+        self.sl_tmx[0] = json.dumps(False)
 
     def close(self):
         try:

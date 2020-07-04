@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Fri Jul 03 2020
+Last Modified: Sat Jul 04 2020
 Modified By: Zentetsu
 
 ----
@@ -48,6 +48,7 @@ class Server:
 
         try:
             self.sl = shared_memory.ShareableList(name=self.name)
+            self.sl_tmx = shared_memory.ShareableList(name=self.name + "_tmx")
         except FileNotFoundError:
             raise SMNotDefined(self.name)
 
@@ -58,6 +59,13 @@ class Server:
         return json.loads(self.sl[0])
 
     def updateValue(self, n_value):
+        print(json.loads(self.sl_tmx[0]), type(json.loads(self.sl_tmx[0])))
+        if json.loads(self.sl_tmx[0]):
+            print("WARNING: MUTEX lock.")
+            return
+        
+        self.sl_tmx[0] = json.dumps(True)
+
         if type(n_value) is not self.type:
             raise SMErrorType
 
@@ -65,6 +73,7 @@ class Server:
             raise SMSizeError
 
         self.sl[0] = json.dumps(n_value)
+        self.sl_tmx[0] = json.dumps(False)
 
     def close(self):
         try:

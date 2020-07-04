@@ -39,7 +39,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='SharedMemory',
-    version='1.0.0.a1',
+    version='1.1.0.a0',
     packages=find_packages(exclude=['tests*']),
     license='GPLv3',
     description='SharedMemory encapsulation',

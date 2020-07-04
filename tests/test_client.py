@@ -101,3 +101,9 @@ def test_file():
     c = Client("test", path="./tests/test.json")
     assert type(c.getValue()) is dict
     c.stop()
+
+def test_new_value():
+    c = Client("test", 1)
+    c.updateValue(12)
+    assert c.getValue() == 12
+    c.stop()

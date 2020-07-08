@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sat Jul 04 2020
+Last Modified: Wed Jul 08 2020
 Modified By: Zentetsu
 
 ----
@@ -38,7 +38,7 @@ HISTORY:
 '''
 
 
-from .SMError import SMErrorType, SMSizeError, MultiInput
+from .SMError import SMTypeError, SMSizeError, SMMultiInputError
 from multiprocessing import shared_memory
 import json
 import time
@@ -48,7 +48,7 @@ import sys
 class Client:
     def __init__(self, name, value=None, path=None, size=10, timeout=1):
         if value is None and path is None or value is not None and path is not None:
-            raise MultiInput
+            raise SMMultiInputError
         elif value is None:
             self.value = self._initValueByJSON(path)
         else:
@@ -78,7 +78,7 @@ class Client:
         elif value is bool:
             value = False
         elif value is dict or value is list:
-            raise SMErrorType(value)
+            raise SMTypeError(value)
 
         return value
 
@@ -106,7 +106,7 @@ class Client:
         self.sl_tmx[0] = json.dumps(True)
 
         if type(n_value) is not self.type:
-            raise SMErrorType
+            raise SMTypeError
 
         if sys.getsizeof(n_value) > self.size:
             raise SMSizeError

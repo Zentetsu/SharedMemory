@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sat Jul 04 2020
+Last Modified: Wed Jul 08 2020
 Modified By: Zentetsu
 
 ----
@@ -36,7 +36,7 @@ HISTORY:
 2020-07-01	Zen	Creating file
 '''
 
-from .SMError import SMErrorType, SMSizeError, SMNotDefined
+from .SMError import SMTypeError, SMSizeError, SMNotDefined
 from multiprocessing import shared_memory
 import json
 import time
@@ -71,7 +71,7 @@ class Server:
         self.sl_tmx[0] = json.dumps(True)
 
         if type(n_value) is not self.type:
-            raise SMErrorType
+            raise SMTypeError
 
         if sys.getsizeof(n_value) > self.size:
             raise SMSizeError

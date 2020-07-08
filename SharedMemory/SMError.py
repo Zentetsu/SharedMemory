@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Fri Jul 03 2020
+Last Modified: Wed Jul 08 2020
 Modified By: Zentetsu
 
 ----
@@ -36,7 +36,7 @@ HISTORY:
 '''
 
 
-class SMErrorType(Exception):
+class SMTypeError(Exception):
     def __init__(self, type, message=" is not accepted."):
         self.type = type
         self.message = str(self.type) + message
@@ -48,7 +48,7 @@ class SMSizeError(Exception):
         self.message = str(self.type) + message
         super().__init__(self.message)
 
-class MultiInput(Exception):
+class SMMultiInputError(Exception):
     def __init__(self, message="value xor path must be None."):
         self.message = message
         super().__init__(self.message)

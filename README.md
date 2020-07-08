@@ -10,7 +10,8 @@ Encapsulation of the python shared_memory library.
 * Adding timeout for Mutex
 
 ### Future improvement
-* ...
+* Adding more tests
+* Adding comments
 
 ### More
 [![PyPI version](https://badge.fury.io/py/SharedMemory.svg)](https://badge.fury.io/py/SharedMemory)

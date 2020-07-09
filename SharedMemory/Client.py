@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Wed Jul 08 2020
+Last Modified: Thu Jul 09 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-09	Zen	Adding some comments
 2020-07-03	Zen	Correction of data acquisition
 2020-07-03	Zen	Data simplification
 2020-07-02	Zen	Adding exception and json reader
@@ -46,7 +47,21 @@ import sys
 
 
 class Client:
+    """Client class focused on sharing data with other Server 
+    """    
     def __init__(self, name, value=None, path=None, size=10, timeout=1):
+        """Class constructor
+
+        Args:
+            name (str): desired name for the sharing space
+            value ([type], optional): value to share with the other Server. Defaults to None.
+            path (str, optional): path to load JSON file and sharing data inside. Defaults to None.
+            size (int, optional): size of the shared space or str value. Defaults to 10.
+            timeout (int, optional): mutex timeout. Defaults to 1.
+
+        Raises:
+            SMMultiInputError: raise an error when value and path are both at None or initialized
+        """        
         if value is None and path is None or value is not None and path is not None:
             raise SMMultiInputError
         elif value is None:
@@ -61,7 +76,15 @@ class Client:
 
         self._initSharedMemory()
 
-    def _initValueByJSON(self, path):
+    def _initValueByJSON(self, path)->dict:  
+        """Method to extract value from a JSON file
+
+        Args:
+            path (str): path to the JSON file
+
+        Returns:
+            dict: return  data from JSON file
+        """        
         json_file = open(path)        
         value = json.load(json_file)
         json_file.close()
@@ -69,6 +92,17 @@ class Client:
         return value
 
     def _checkValue(self, value):
+        """Method to check if value isn't a dict or list and to initialize
+
+        Args:
+            value ([type]): value to test
+
+        Raises:
+            SMTypeError: raise an error when the value is a dict or a list
+
+        Returns:
+            [type]: return the initialized value
+        """        
         if value is str:
             value = " " * self.size
         elif value is int:
@@ -83,6 +117,8 @@ class Client:
         return value
 
     def _initSharedMemory(self):
+        """Method to initialize the shared space
+        """        
         if type(self.value) is list and type in [type(e) for e in self.value]:
             for i in range(0, len(self.value)):
                 self.value[i] = self._checkValue(self.value[i])
@@ -93,9 +129,23 @@ class Client:
         self.sl_tmx = shared_memory.ShareableList([json.dumps(False)], name=self.name + "_tmx")
 
     def getValue(self):
+        """Method to return the shared value
+
+        Returns:
+            [type]: return data from the shared space
+        """        
         return json.loads(self.sl[0])
 
     def updateValue(self, n_value):
+        """Method to update data fo the shared space
+
+        Args:
+            n_value ([type]): new version of data 
+
+        Raises:
+            SMTypeError: raise en error when the new value is not correspoding to the initial type
+            SMSizeError: raise an error when the size of the new value exced the previous one
+        """        
         start = time.time()
         
         while json.loads(self.sl_tmx[0]):
@@ -115,6 +165,8 @@ class Client:
         self.sl_tmx[0] = json.dumps(False)
 
     def close(self):
+        """Method to close the shared space
+        """        
         try:
             self.sl.shm.close()
             self.sl_tmx.shm.close()
@@ -122,6 +174,8 @@ class Client:
             pass
         
     def unlink(self):
+        """Method to remove the shared space from the memory
+        """        
         try:
             self.sl.shm.unlink()
             self.sl_tmx.shm.unlink()
@@ -129,10 +183,17 @@ class Client:
             pass
 
     def stop(self):
+        """Method that calls stop and unlink method
+        """        
         self.close()
         self.unlink()
 
     def __repr__(self):
+        """Redefined method to print value of the Client Class instance
+
+        Returns:
+            str: printable value of Client Class instance
+        """        
         s = "Client: " + self.name + "\n" + "Value: " + json.loads(self.sl[0]).__repr__()
     
         return s

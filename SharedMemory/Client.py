@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-13	Zen	Adding getStatus, start and restart methods
 2020-07-09	Zen	Adding some comments
 2020-07-03	Zen	Correction of data acquisition
 2020-07-03	Zen	Data simplification
@@ -47,7 +48,7 @@ import sys
 
 
 class Client:
-    """Client class focused on sharing data with a Server 
+    """Client class focused on sharing data with a Server
     """
     def __init__(self, name, value=None, path=None, size=10, timeout=1):
         """Class constructor
@@ -73,10 +74,11 @@ class Client:
         self.timeout = timeout
         self.type = type(self.value)
         self.name = name
+        self.state = "Stopped"
 
         self._initSharedMemory()
 
-    def _initValueByJSON(self, path)->dict:  
+    def _initValueByJSON(self, path)->dict:
         """Method to extract value from a JSON file
 
         Args:
@@ -85,7 +87,7 @@ class Client:
         Returns:
             dict: return  data from JSON file
         """
-        json_file = open(path)        
+        json_file = open(path)
         value = json.load(json_file)
         json_file.close()
 
@@ -125,8 +127,7 @@ class Client:
 
         self.size = sys.getsizeof(self.value)
 
-        self.sl = shared_memory.ShareableList([json.dumps(self.value)], name=self.name)
-        self.sl_tmx = shared_memory.ShareableList([json.dumps(False)], name=self.name + "_tmx")
+        self.start()
 
     def getValue(self):
         """Method to return the shared value
@@ -140,14 +141,14 @@ class Client:
         """Method to update data fo the shared space
 
         Args:
-            n_value ([type]): new version of data 
+            n_value ([type]): new version of data
 
         Raises:
             SMTypeError: raise en error when the new value is not correspoding to the initial type
             SMSizeError: raise an error when the size of the new value exced the previous one
         """
         start = time.time()
-        
+
         while json.loads(self.sl_tmx[0]):
             if (time.time() - start) > self.timeout:
                 print("WARNING: timeout MUTEX.")
@@ -164,6 +165,14 @@ class Client:
         self.sl[0] = json.dumps(n_value)
         self.sl_tmx[0] = json.dumps(False)
 
+    def getStatus(self) -> str:
+        """Method that return shared memory state
+
+        Returns:
+            str: shared memory state
+        """
+        return self.state
+
     def close(self):
         """Method to close the shared space
         """
@@ -172,7 +181,7 @@ class Client:
             self.sl_tmx.shm.close()
         except FileNotFoundError:
             pass
-        
+
     def unlink(self):
         """Method to remove the shared space from the memory
         """
@@ -182,9 +191,28 @@ class Client:
         except FileNotFoundError:
             pass
 
+    def start(self):
+        """Method that create shared memory space
+        """
+        self.state == "Started"
+
+        try:
+            self.sl = shared_memory.ShareableList([json.dumps(self.value)], name=self.name)
+            self.sl_tmx = shared_memory.ShareableList([json.dumps(False)], name=self.name + "_tmx")
+        except Exception:
+            pass
+
+    def restart(self):
+        """Method to restart the shared memory space
+        """
+        self.stop()
+        self.start()
+
     def stop(self):
         """Method that calls stop and unlink method
         """
+        self.state == "Stopped"
+
         self.close()
         self.unlink()
 
@@ -194,6 +222,6 @@ class Client:
         Returns:
             str: printable value of Client Class instance
         """
-        s = "Client: " + self.name + "\n" + "Value: " + json.loads(self.sl[0]).__repr__()
+        s = "Client: " + self.name + "\n" + "Status: " + self.state + "\n" + "Value: " + json.loads(self.sl[0]).__repr__()
 
         return s

@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Jul 09 2020
+Last Modified: Mon Jul 13 2020
 Modified By: Zentetsu
 
 ----
@@ -47,8 +47,8 @@ import sys
 
 
 class Client:
-    """Client class focused on sharing data with other Server 
-    """    
+    """Client class focused on sharing data with a Server 
+    """
     def __init__(self, name, value=None, path=None, size=10, timeout=1):
         """Class constructor
 
@@ -61,7 +61,7 @@ class Client:
 
         Raises:
             SMMultiInputError: raise an error when value and path are both at None or initialized
-        """        
+        """
         if value is None and path is None or value is not None and path is not None:
             raise SMMultiInputError
         elif value is None:
@@ -84,7 +84,7 @@ class Client:
 
         Returns:
             dict: return  data from JSON file
-        """        
+        """
         json_file = open(path)        
         value = json.load(json_file)
         json_file.close()
@@ -102,7 +102,7 @@ class Client:
 
         Returns:
             [type]: return the initialized value
-        """        
+        """
         if value is str:
             value = " " * self.size
         elif value is int:
@@ -118,7 +118,7 @@ class Client:
 
     def _initSharedMemory(self):
         """Method to initialize the shared space
-        """        
+        """
         if type(self.value) is list and type in [type(e) for e in self.value]:
             for i in range(0, len(self.value)):
                 self.value[i] = self._checkValue(self.value[i])
@@ -133,7 +133,7 @@ class Client:
 
         Returns:
             [type]: return data from the shared space
-        """        
+        """
         return json.loads(self.sl[0])
 
     def updateValue(self, n_value):
@@ -145,14 +145,14 @@ class Client:
         Raises:
             SMTypeError: raise en error when the new value is not correspoding to the initial type
             SMSizeError: raise an error when the size of the new value exced the previous one
-        """        
+        """
         start = time.time()
         
         while json.loads(self.sl_tmx[0]):
             if (time.time() - start) > self.timeout:
                 print("WARNING: timeout MUTEX.")
                 return
-        
+
         self.sl_tmx[0] = json.dumps(True)
 
         if type(n_value) is not self.type:
@@ -166,7 +166,7 @@ class Client:
 
     def close(self):
         """Method to close the shared space
-        """        
+        """
         try:
             self.sl.shm.close()
             self.sl_tmx.shm.close()
@@ -175,7 +175,7 @@ class Client:
         
     def unlink(self):
         """Method to remove the shared space from the memory
-        """        
+        """
         try:
             self.sl.shm.unlink()
             self.sl_tmx.shm.unlink()
@@ -184,7 +184,7 @@ class Client:
 
     def stop(self):
         """Method that calls stop and unlink method
-        """        
+        """
         self.close()
         self.unlink()
 
@@ -193,7 +193,7 @@ class Client:
 
         Returns:
             str: printable value of Client Class instance
-        """        
+        """
         s = "Client: " + self.name + "\n" + "Value: " + json.loads(self.sl[0]).__repr__()
-    
+
         return s

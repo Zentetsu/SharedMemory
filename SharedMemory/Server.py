@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Wed Jul 08 2020
+Last Modified: Mon Jul 13 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-13	Zen	Adding comments
 2020-07-03	Zen	Correction of data acquisition
 2020-07-03	Zen	Server implementation
 2020-07-01	Zen	Creating file
@@ -44,7 +45,18 @@ import sys
 
 
 class Server:
+    """Client class focused on receiving data from Client
+    """
     def __init__(self, name, timeout=10):
+        """Class constructor
+
+        Args:
+            name (str): name of the existing shared memory
+            timeout (int, optional): mutex timeout. Defaults to 10.
+
+        Raises:
+            SMNotDefined: raise an error when the shared memory with this name isn't defined
+        """
         self.name = name
 
         try:
@@ -58,16 +70,30 @@ class Server:
         self.type = type(json.loads(self.sl[0]))
 
     def getValue(self):
+        """Method to return the shared value
+
+        Returns:
+            [type]: return data from the shared space
+        """
         return json.loads(self.sl[0])
 
     def updateValue(self, n_value):
+        """Method to update data fo the shared space
+
+        Args:
+            n_value ([type]): new version of data 
+
+        Raises:
+            SMTypeError: raise en error when the new value is not correspoding to the initial type
+            SMSizeError: raise an error when the size of the new value exced the previous one
+        """
         start = time.time()
         
         while json.loads(self.sl_tmx[0]):
             if (time.time() - start) > self.timeout:
                 print("WARNING: timeout MUTEX.")
                 return
-        
+
         self.sl_tmx[0] = json.dumps(True)
 
         if type(n_value) is not self.type:
@@ -80,13 +106,17 @@ class Server:
         self.sl_tmx[0] = json.dumps(False)
 
     def close(self):
+        """Method to close the shared space
+        """
         try:
             self.sl.shm.close()
             self.sl_tmx.shm.close()
         except FileNotFoundError:
             pass
-        
+
     def unlink(self):
+        """Method to remove the shared space from the memory
+        """
         try:
             self.sl.shm.unlink()
             self.sl_tmx.shm.unlink()
@@ -94,10 +124,17 @@ class Server:
             pass
 
     def stop(self):
+        """Method that calls stop and unlink method
+        """
         self.close()
         self.unlink()
 
     def __repr__(self):
+        """Redefined method to print value of the Server Class instance
+
+        Returns:
+            str: printable value of Server Class instance
+        """
         s = "Server: " + self.name + "\n" + "Value: " + json.loads(self.sl[0]).__repr__()
     
         return s

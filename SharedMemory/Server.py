@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-13	Zen	Adding getStatus, connect and reconnect methods
 2020-07-13	Zen	Adding comments
 2020-07-03	Zen	Correction of data acquisition
 2020-07-03	Zen	Server implementation
@@ -68,6 +69,7 @@ class Server:
         self.timeout = timeout
         self.size = sys.getsizeof(json.loads(self.sl[0]))
         self.type = type(json.loads(self.sl[0]))
+        self.state = "Disconnected"
 
     def getValue(self):
         """Method to return the shared value
@@ -81,14 +83,14 @@ class Server:
         """Method to update data fo the shared space
 
         Args:
-            n_value ([type]): new version of data 
+            n_value ([type]): new version of data
 
         Raises:
             SMTypeError: raise en error when the new value is not correspoding to the initial type
             SMSizeError: raise an error when the size of the new value exced the previous one
         """
         start = time.time()
-        
+
         while json.loads(self.sl_tmx[0]):
             if (time.time() - start) > self.timeout:
                 print("WARNING: timeout MUTEX.")
@@ -104,6 +106,14 @@ class Server:
 
         self.sl[0] = json.dumps(n_value)
         self.sl_tmx[0] = json.dumps(False)
+
+    def getStatus(self) -> str:
+        """Method that return shared memory state
+
+        Returns:
+            str: shared memory state
+        """
+        return self.state
 
     def close(self):
         """Method to close the shared space
@@ -123,9 +133,28 @@ class Server:
         except FileNotFoundError:
             pass
 
+    def connect(self):
+        """Method that connect Server to the Client shared memory
+        """
+        self.state = "Connected"
+
+        try:
+            self.sl = shared_memory.ShareableList(name=self.name)
+            self.sl_tmx = shared_memory.ShareableList(name=self.name + "_tmx")
+        except Exception:
+            pass
+
+    def reconnect(self):
+        """Method to reconnect to the shared memory
+        """
+        self.stop()
+        self.connection()
+
     def stop(self):
         """Method that calls stop and unlink method
         """
+        self.state = "Disconnected"
+
         self.close()
         self.unlink()
 
@@ -135,6 +164,6 @@ class Server:
         Returns:
             str: printable value of Server Class instance
         """
-        s = "Server: " + self.name + "\n" + "Value: " + json.loads(self.sl[0]).__repr__()
-    
+        s = "Server: " + self.name + "\n" + "Status: " + self.state + "\n" + "Value: " + json.loads(self.sl[0]).__repr__()
+
         return s

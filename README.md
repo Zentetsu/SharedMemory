@@ -12,6 +12,7 @@ Encapsulation of the python shared_memory library.
 ### Future improvement
 * Adding more tests
 * Adding method to check data avability trough the shared memory
+* Adding method to get information about data avability
 
 ### More
 [![PyPI version](https://badge.fury.io/py/SharedMemory.svg)](https://badge.fury.io/py/SharedMemory)

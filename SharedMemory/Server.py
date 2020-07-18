@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Mon Jul 13 2020
+Last Modified: Sat Jul 18 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-18	Zen	Adding method to check data availability
 2020-07-13	Zen	Adding getStatus, connect and reconnect methods
 2020-07-13	Zen	Adding comments
 2020-07-03	Zen	Correction of data acquisition
@@ -67,9 +68,22 @@ class Server:
             raise SMNotDefined(self.name)
 
         self.timeout = timeout
+        self.availability = True
+        self.sl_tmx[0] = json.dumps([json.loads(self.sl_tmx[0])[0], json.loads(self.sl_tmx[0])[1], self.availability])
+        self.client_availability = json.loads(self.sl_tmx[0])[1]
         self.size = sys.getsizeof(json.loads(self.sl[0]))
         self.type = type(json.loads(self.sl[0]))
-        self.state = "Disconnected"
+        self.value = json.loads(self.sl[0])
+        self.state = "Connected"
+
+
+    def _checkClientAvailability(self):
+        """Method to get the Client's availability
+        """
+        try:
+            self.client_availability = json.loads(self.sl_tmx[0])[1]
+        except:
+            self.client_availability = False
 
     def getValue(self):
         """Method to return the shared value
@@ -77,7 +91,14 @@ class Server:
         Returns:
             [type]: return data from the shared space
         """
-        return json.loads(self.sl[0])
+        self._checkClientAvailability()
+
+        if not self.client_availability:
+            print("WARNING: Unable to get data due to the Client's unavailability.")
+        else:
+            self.value = json.loads(self.sl[0])
+
+        return self.value
 
     def updateValue(self, n_value):
         """Method to update data fo the shared space
@@ -89,14 +110,20 @@ class Server:
             SMTypeError: raise en error when the new value is not correspoding to the initial type
             SMSizeError: raise an error when the size of the new value exced the previous one
         """
+        self._checkClientAvailability()
+
+        if not self.client_availability:
+            print("WARNING: Unable to update data due to the Client's unavailability.")
+            return
+
         start = time.time()
 
-        while json.loads(self.sl_tmx[0]):
+        while json.loads(self.sl_tmx[0])[0]:
             if (time.time() - start) > self.timeout:
                 print("WARNING: timeout MUTEX.")
                 return
 
-        self.sl_tmx[0] = json.dumps(True)
+        self.sl_tmx[0] = json.dumps([True, self.client_availability, self.availability])
 
         if type(n_value) is not self.type:
             raise SMTypeError
@@ -104,8 +131,10 @@ class Server:
         if sys.getsizeof(n_value) > self.size:
             raise SMSizeError
 
-        self.sl[0] = json.dumps(n_value)
-        self.sl_tmx[0] = json.dumps(False)
+        self.value = n_value
+        self.sl[0] = json.dumps(self.value)
+        self.sl_tmx[0] = json.dumps([False, self.client_availability, self.availability])
+        print(self.sl_tmx[0])
 
     def getStatus(self) -> str:
         """Method that return shared memory state
@@ -136,24 +165,30 @@ class Server:
     def connect(self):
         """Method that connect Server to the Client shared memory
         """
-        self.state = "Connected"
-
         try:
+            self.state = "Connected"
+            self.availability = True
+
             self.sl = shared_memory.ShareableList(name=self.name)
             self.sl_tmx = shared_memory.ShareableList(name=self.name + "_tmx")
+
+            self.value = json.loads(self.sl[0])
+            self.sl_tmx[0] = json.dumps([json.loads(self.sl_tmx[0])[0], json.loads(self.sl_tmx[0])[1], self.availability])
         except Exception:
-            pass
+            self.state = "Disconnected"
 
     def reconnect(self):
         """Method to reconnect to the shared memory
         """
         self.stop()
-        self.connection()
+        self.connect()
 
     def stop(self):
         """Method that calls stop and unlink method
         """
         self.state = "Disconnected"
+        self.availability = False
+        self.sl_tmx[0] = json.dumps([json.loads(self.sl_tmx[0])[0], json.loads(self.sl_tmx[0])[1], self.availability])
 
         self.close()
         self.unlink()
@@ -164,6 +199,12 @@ class Server:
         Returns:
             str: printable value of Server Class instance
         """
-        s = "Server: " + self.name + "\n" + "Status: " + self.state + "\n" + "Value: " + json.loads(self.sl[0]).__repr__()
+        self._checkClientAvailability()
+
+        s = "Server: " + self.name + "\n"\
+            + "\tStatus: " + self.state + "\n"\
+            + "\tAvailable: " + self.availability.__repr__() + "\n"\
+            + "\tClient available: " + self.client_availability.__repr__() + "\n"\
+            + "\tValue: " + self.value.__repr__()
 
         return s

@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sat Jul 04 2020
+Last Modified: Thu Jul 16 2020
 Modified By: Zentetsu
 
 ----
@@ -36,40 +36,46 @@ HISTORY:
 2020-07-01	Zen	Creating file
 '''
 
-
-from SharedMemory.Client import Client
+from context import Client
+# from SharedMemory.Client import Client
 
 def test_str():
     c = Client("test", "azerty")
+    print(c)
     assert type(c.getValue()) is str
     c.stop()
 
 def test_int():
     c = Client("test", 1)
+    print(c)
     assert type(c.getValue()) is int
     assert c.getValue() == 1
     c.stop()
 
 def test_float():
     c = Client("test", 1.2)
+    print(c)
     assert type(c.getValue()) is float
     assert c.getValue() == 1.2
     c.stop()
 
 def test_bool():
     c = Client("test", True)
+    print(c)
     assert type(c.getValue()) is bool
     assert c.getValue()
     c.stop()
 
 def test_dict1():
     c = Client("test", {'a': 1})
+    print(c)
     assert type(c.getValue()) is dict
     assert c.getValue()['a'] == 1
     c.stop()
 
 def test_list1():
     c = Client("test", [0, 1])
+    print(c)
     assert type(c.getValue()) is list
     assert c.getValue()[0] == 0
     assert c.getValue()[1] == 1
@@ -107,3 +113,14 @@ def test_new_value():
     c.updateValue(12)
     assert c.getValue() == 12
     c.stop()
+
+test_str()
+test_int()
+test_float()
+test_bool()
+test_dict1()
+test_list1()
+test_list2()
+test_list3()
+test_file()
+test_new_value()

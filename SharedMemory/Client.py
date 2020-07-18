@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Mon Jul 13 2020
+Last Modified: Sat Jul 18 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-18	Zen	fix state behavior and and adding method to check data availability
 2020-07-13	Zen	Adding getStatus, start and restart methods
 2020-07-09	Zen	Adding some comments
 2020-07-03	Zen	Correction of data acquisition
@@ -75,6 +76,9 @@ class Client:
         self.type = type(self.value)
         self.name = name
         self.state = "Stopped"
+        self.availability = False
+        self.server_availability = False
+        self.server_availability_ls = False
 
         self._initSharedMemory()
 
@@ -129,13 +133,31 @@ class Client:
 
         self.start()
 
+    def _checkServerAvailability(self):
+        """Method to get the Server's availability
+        """
+        try:
+            self.server_availability = json.loads(self.sl_tmx[0])[2]
+            self.server_availability_ls = self.server_availability
+        except:
+            self.server_availability = False
+
     def getValue(self):
         """Method to return the shared value
 
         Returns:
             [type]: return data from the shared space
         """
-        return json.loads(self.sl[0])
+        self._checkServerAvailability()
+
+        if not self.server_availability:# and self.server_availability_ls:
+            print("INFO: Server unavailable, restarting shared memory space.")
+            self.server_availability_ls = False
+            self.restart()
+
+        self.value = json.loads(self.sl[0])
+
+        return self.value
 
     def updateValue(self, n_value):
         """Method to update data fo the shared space
@@ -147,14 +169,21 @@ class Client:
             SMTypeError: raise en error when the new value is not correspoding to the initial type
             SMSizeError: raise an error when the size of the new value exced the previous one
         """
+        self._checkServerAvailability()
+
+        if not self.server_availability:# and self.server_availability_ls:
+            print("INFO: Server unavailable, restarting shared memory space.")
+            self.server_availability_ls = False
+            self.restart()
+
         start = time.time()
 
-        while json.loads(self.sl_tmx[0]):
+        while json.loads(self.sl_tmx[0])[0]:
             if (time.time() - start) > self.timeout:
                 print("WARNING: timeout MUTEX.")
                 return
 
-        self.sl_tmx[0] = json.dumps(True)
+        self.sl_tmx[0] = json.dumps([True, self.availability, self.server_availability])
 
         if type(n_value) is not self.type:
             raise SMTypeError
@@ -162,8 +191,9 @@ class Client:
         if sys.getsizeof(n_value) > self.size:
             raise SMSizeError
 
-        self.sl[0] = json.dumps(n_value)
-        self.sl_tmx[0] = json.dumps(False)
+        self.value = n_value
+        self.sl[0] = json.dumps(self.value)
+        self.sl_tmx[0] = json.dumps([False, self.availability, self.server_availability])
 
     def getStatus(self) -> str:
         """Method that return shared memory state
@@ -194,11 +224,12 @@ class Client:
     def start(self):
         """Method that create shared memory space
         """
-        self.state == "Started"
+        self.state = "Started"
+        self.availability = True
 
         try:
             self.sl = shared_memory.ShareableList([json.dumps(self.value)], name=self.name)
-            self.sl_tmx = shared_memory.ShareableList([json.dumps(False)], name=self.name + "_tmx")
+            self.sl_tmx = shared_memory.ShareableList([json.dumps([False, self.availability, self.server_availability])], name=self.name + "_tmx")
         except Exception:
             pass
 
@@ -211,7 +242,9 @@ class Client:
     def stop(self):
         """Method that calls stop and unlink method
         """
-        self.state == "Stopped"
+        self.state = "Stopped"
+        self.availability = False
+        self.sl_tmx[0] = json.dumps([False, self.availability, self.server_availability])
 
         self.close()
         self.unlink()
@@ -222,6 +255,12 @@ class Client:
         Returns:
             str: printable value of Client Class instance
         """
-        s = "Client: " + self.name + "\n" + "Status: " + self.state + "\n" + "Value: " + json.loads(self.sl[0]).__repr__()
+        self._checkServerAvailability()
+
+        s = "Client: " + self.name + "\n"\
+            + "\tStatus: " + self.state + "\n"\
+            + "\tAvailable: " + self.availability.__repr__() + "\n"\
+            + "\tServer Available: " + self.server_availability.__repr__() + "\n"\
+            + "\tValue: " + self.value.__repr__()
 
         return s

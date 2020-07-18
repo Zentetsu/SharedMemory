@@ -123,7 +123,33 @@ def test_stop():
     c = Client("test11", 1)
     print(c)
     c.stop()
+    try:
+        print(c)
+        assert True
+    except:
+        assert False
+
+def test_call():
+    c = Client("test12", 1)
     print(c)
+    c.stop()
+    try:
+        c.stop()
+        print(c)
+        assert True
+    except:
+        assert False
+
+def test_call2():
+    c = Client("test13", 1)
+    print(c)
+    try:
+        c.start()
+        print(c)
+        assert True
+    except:
+        assert False
+    c.stop()
 
 test_str()
 print("-"*10)
@@ -146,4 +172,8 @@ print("-"*10)
 test_new_value()
 print("-"*10)
 test_stop()
+print("-"*10)
+test_call()
+print("-"*10)
+test_call2()
 print("-"*10)

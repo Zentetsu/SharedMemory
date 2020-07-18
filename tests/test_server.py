@@ -36,9 +36,9 @@ HISTORY:
 2020-07-01	Zen	Creating file
 '''
 
-# from context import Client, Server
-from SharedMemory.Client import Client
-from SharedMemory.Server import Server
+from context import Client, Server
+# from SharedMemory.Client import Client
+# from SharedMemory.Server import Server
 
 def test_connection():
     c = Client("test1", "azerty")
@@ -101,6 +101,24 @@ def test_server_stopped():
     print(s)
     c.stop()
 
+def test_call():
+    c = Client("test6", "azerty")
+    s = Server("test6")
+    print(c)
+    print(s)
+    s.stop()
+    s.stop()
+    c.stop()
+
+def test_call2():
+    c = Client("test7", "azerty")
+    s = Server("test7")
+    print(c)
+    print(s)
+    s.connect()
+    s.stop()
+    c.stop()
+
 print("-"*10)
 test_connection()
 print("-"*10)
@@ -111,4 +129,8 @@ print("-"*10)
 test_client_stopped()
 print("-"*10)
 test_server_stopped()
+print("-"*10)
+test_call()
+print("-"*10)
+test_call2()
 print("-"*10)

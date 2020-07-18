@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-18	Zen	Adding method to get access to data availability information
 2020-07-18	Zen	Adding method to check data availability
 2020-07-13	Zen	Adding getStatus, connect and reconnect methods
 2020-07-13	Zen	Adding comments
@@ -143,6 +144,14 @@ class Server:
             str: shared memory state
         """
         return self.state
+
+    def getAvailability(self) -> [bool, bool]:
+        """Method that return the availability of Server and Client
+
+        Returns:
+            [bool, bool]: Server and Client availability status
+        """
+        return self.availability, self.client_availability
 
     def close(self):
         """Method to close the shared space

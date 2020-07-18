@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sat Jul 18 2020
+Last Modified: Sun Jul 19 2020
 Modified By: Zentetsu
 
 ----
@@ -36,9 +36,9 @@ HISTORY:
 2020-07-01	Zen	Creating file
 '''
 
-from context import Client, Server
-# from SharedMemory.Client import Client
-# from SharedMemory.Server import Server
+# from context import Client, Server
+from SharedMemory.Client import Client
+from SharedMemory.Server import Server
 
 def test_connection():
     c = Client("test1", "azerty")

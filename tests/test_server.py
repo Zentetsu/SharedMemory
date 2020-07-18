@@ -37,7 +37,7 @@ HISTORY:
 '''
 
 # from context import Client, Server
-from SharedMemory.Server import Server
+from SharedMemory.Server import Client, Server
 
 def test_connection():
     c = Client("test1", "azerty")

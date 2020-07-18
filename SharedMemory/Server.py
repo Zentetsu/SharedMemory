@@ -195,6 +195,10 @@ class Server:
     def stop(self):
         """Method that calls stop and unlink method
         """
+        if self.state == "Disconnected":
+            print("INFO: Client already disconnected.")
+            return
+
         self.state = "Disconnected"
         self.availability = False
         self.sl_tmx[0] = json.dumps([json.loads(self.sl_tmx[0])[0], json.loads(self.sl_tmx[0])[1], self.availability])

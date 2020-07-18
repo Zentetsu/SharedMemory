@@ -233,6 +233,10 @@ class Client:
     def start(self):
         """Method that create shared memory space
         """
+        if self.state == "Started":
+            print("INFO: Client already started.")
+            return
+
         self.state = "Started"
         self.availability = True
 
@@ -251,6 +255,10 @@ class Client:
     def stop(self):
         """Method that calls stop and unlink method
         """
+        if self.state == "Stopped":
+            print("INFO: Client already stopped.")
+            return
+
         self.state = "Stopped"
         self.availability = False
         self.sl_tmx[0] = json.dumps([False, self.availability, self.server_availability])

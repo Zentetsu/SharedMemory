@@ -3,13 +3,12 @@
 Encapsulation of the python shared_memory library.
 
 ### Features
-* Sharing:
+* Shared type:
     * Basic type (int, float, bool, str)
     * list and dict
-* Adding Mutex
-* Adding timeout for Mutex
-* Adding method to check data avability trough the shared memory
-* Adding method to get access to data availability information
+* Mutex
+* Timeout for Mutex
+* Management of the availability of shared memory space
 
 ### Future improvement
 * Adding more tests

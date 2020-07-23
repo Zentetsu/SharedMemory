@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sat Jul 18 2020
+Last Modified: Thu Jul 23 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-23	Zen	Fix availability when checking availability
 2020-07-18	Zen	Adding method to get access to data availability information
 2020-07-18	Zen	Adding method to check data availability
 2020-07-13	Zen	Adding getStatus, connect and reconnect methods
@@ -151,6 +152,8 @@ class Server:
         Returns:
             [bool, bool]: Server and Client availability status
         """
+        self._checkClientAvailability()
+
         return self.availability, self.client_availability
 
     def close(self):

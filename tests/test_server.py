@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sun Jul 19 2020
+Last Modified: Thu Jul 23 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-07-23	Zen	Adding test for availability
 2020-07-18	Zen	Adding some tests
 2020-07-03	Zen	Updating test file
 2020-07-01	Zen	Creating file
@@ -119,6 +120,16 @@ def test_call2():
     s.stop()
     c.stop()
 
+def test_availability():
+    c = Client("test7", "azerty")
+    s = Server("test7")
+    assert c.getAvailability() == (True, True)
+    print(c)
+    assert s.getAvailability() == (True, True)
+    print(s)
+    s.stop()
+    c.stop()
+
 print("-"*10)
 test_connection()
 print("-"*10)
@@ -132,5 +143,5 @@ test_server_stopped()
 print("-"*10)
 test_call()
 print("-"*10)
-test_call2()
+test_availability()
 print("-"*10)

@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Jul 23 2020
+Last Modified: Sun Sep 13 2020
 Modified By: Zentetsu
 
 ----
@@ -53,7 +53,7 @@ import sys
 class Client:
     """Client class focused on sharing data with a Server
     """
-    def __init__(self, name, value=None, path=None, size=10, timeout=1):
+    def __init__(self, name:str, value=None, path:str=None, size:int=10, timeout:int=1):
         """Class constructor
 
         Args:
@@ -84,7 +84,7 @@ class Client:
 
         self._initSharedMemory()
 
-    def _initValueByJSON(self, path)->dict:
+    def _initValueByJSON(self, path:str)->dict:
         """Method to extract value from a JSON file
 
         Args:

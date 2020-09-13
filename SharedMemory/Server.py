@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Jul 23 2020
+Last Modified: Sun Sep 13 2020
 Modified By: Zentetsu
 
 ----
@@ -136,7 +136,6 @@ class Server:
         self.value = n_value
         self.sl[0] = json.dumps(self.value)
         self.sl_tmx[0] = json.dumps([False, self.client_availability, self.availability])
-        print(self.sl_tmx[0])
 
     def getStatus(self) -> str:
         """Method that return shared memory state

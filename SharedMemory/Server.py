@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sun Sep 13 2020
+Last Modified: Thu Sep 17 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-09-17	Zen	Adding overloaded methods
 2020-07-23	Zen	Fix availability when checking availability
 2020-07-18	Zen	Adding method to get access to data availability information
 2020-07-18	Zen	Adding method to check data availability
@@ -87,6 +88,7 @@ class Server:
         except:
             self.client_availability = False
 
+    # @PendingDeprecationWarning
     def getValue(self):
         """Method to return the shared value
 
@@ -102,6 +104,7 @@ class Server:
 
         return self.value
 
+    # @PendingDeprecationWarning
     def updateValue(self, n_value):
         """Method to update data fo the shared space
 
@@ -126,6 +129,7 @@ class Server:
                 return
 
         self.sl_tmx[0] = json.dumps([True, self.client_availability, self.availability])
+        self.value = json.loads(self.sl[0])
 
         if type(n_value) is not self.type:
             raise SMTypeError
@@ -134,6 +138,117 @@ class Server:
             raise SMSizeError
 
         self.value = n_value
+        self.sl[0] = json.dumps(self.value)
+        self.sl_tmx[0] = json.dumps([False, self.client_availability, self.availability])
+
+    def __getitem__(self, key):
+        """Method to get item value from the shared data
+
+        Args:
+            key ([type]): key
+        """
+        self._checkClientAvailability()
+
+        if not self.client_availability:
+            print("WARNING: Unable to get data due to the Client's unavailability.")
+        else:
+            self.value = json.loads(self.sl[0])
+
+        if self.type == dict:
+            if type(key) is int:
+                key = str(key)
+            return self.value[key]
+        elif self.type == list:
+            return self.value[key]
+
+    def __setitem__(self, key, value):
+        """Method to update data of the shared space
+
+        Args:
+            key (str): key
+            value ([type]): new key value
+
+        Raises:
+            TypeError: raise an error when this method is called and tha data shared type is not a dict
+        """
+        if self.type == list:
+            raise TypeError("Data shared type is list not dict.")
+
+        self._checkClientAvailability()
+
+        if not self.client_availability:
+            print("WARNING: Unable to update data due to the Client's unavailability.")
+            return
+
+        start = time.time()
+
+        while json.loads(self.sl_tmx[0])[0]:
+            if (time.time() - start) > self.timeout:
+                print("WARNING: timeout MUTEX.")
+                return
+
+        self.sl_tmx[0] = json.dumps([True, self.client_availability, self.availability])
+        self.value = json.loads(self.sl[0])
+
+        if self.type == dict:
+            if type(key) is int:
+                key = str(key)
+            self.value[key] = value
+        elif self.type == list:
+            self.value[key] = value
+
+        self.sl[0] = json.dumps(self.value)
+        self.sl_tmx[0] = json.dumps([False, self.client_availability, self.availability])
+
+    def __len__(self):
+        """Method that returns the size of the shared data
+
+        Returns:
+            int: size of the shared data
+        """
+
+        self.value = json.loads(self.sl[0])
+
+        return self.value.__len__()
+
+    def __contains__(self):
+        """Method to check if an element is into the shared data
+
+        Returns:
+            bool: boolean to determine if the element is or not into the shared data
+        """
+
+        self.value = json.loads(self.sl[0])
+
+        return self.value.__contains__()
+
+    def __delitem__(self, key):
+        """Method to remove an element from the shared data
+
+        Args:
+            key ([type]): Element to remove
+        """
+        if self.type == list:
+            raise TypeError("Data shared type is list not dict.")
+
+        self._checkClientAvailability()
+
+        if not self.client_availability:
+            print("WARNING: Unable to update data due to the Client's unavailability.")
+            return
+
+        start = time.time()
+
+        while json.loads(self.sl_tmx[0])[0]:
+            if (time.time() - start) > self.timeout:
+                print("WARNING: timeout MUTEX.")
+                return
+
+        self.sl_tmx[0] = json.dumps([True, self.client_availability, self.availability])
+        self.value = json.loads(self.sl[0])
+
+        self.value.__delitem__(key)
+
         self.sl[0] = json.dumps(self.value)
         self.sl_tmx[0] = json.dumps([False, self.client_availability, self.availability])
 

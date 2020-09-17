@@ -11,7 +11,7 @@ Encapsulation of the python shared_memory library.
 * Management of the availability of shared memory space
 
 ### Future improvement
-* Using list and dict syntax to access to the shared data
+* Adding overloaded methods for list and dict
 * Adding more tests
 
 ### Example

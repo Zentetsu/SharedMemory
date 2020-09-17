@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Mon Jul 13 2020
+Last Modified: Thu Sep 17 2020
 Modified By: Zentetsu
 
 ----
@@ -58,7 +58,7 @@ class SMSizeError(Exception):
     """Class focused on catching over resizing when data are updated
 
     Args:
-        Exception (Exception): 
+        Exception (Exception):
     """
     def __init__(self, message="size of new value exceeds the previous one."):
         """CLass constructor
@@ -66,15 +66,14 @@ class SMSizeError(Exception):
         Args:
             message (str, optional): message. Defaults to "size of new value exceeds the previous one.".
         """
-        self.type = type
-        self.message = str(self.type) + message
+        self.message = message
         super().__init__(self.message)
 
 class SMMultiInputError(Exception):
     """class focused on catching the fact that value adn path are initialized or not
 
     Args:
-        Exception (Exception): 
+        Exception (Exception):
     """
     def __init__(self, message="value xor path must be None."):
         self.message = message
@@ -84,7 +83,7 @@ class SMNotDefined(Exception):
     """Class focused on catching an attempt to access an unintialized shared memory
 
     Args:
-        Exception (Exception): 
+        Exception (Exception):
     """
     def __init__(self, name, message=None):
         """Class constructor
@@ -95,7 +94,7 @@ class SMNotDefined(Exception):
         """
         if message is None:
             self.message = "shared memory called '" + name + "' is not defined."
-        else: 
+        else:
             self.message = message
 
         super().__init__(self.message)

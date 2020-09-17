@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sun Jul 19 2020
+Last Modified: Thu Sep 17 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-09-17	Zen	Adding test for overloaded methods
 2020-07-18	Zen	Adding new tests
 2020-07-03	Zen	Adding new tests
 2020-07-02	Zen	Adding test with json file
@@ -151,6 +152,20 @@ def test_call2():
         assert False
     c.stop()
 
+def test_valueAccess():
+    c = Client("test13", {'0':0, '1':1, '2':2, '3':3})
+    print(c)
+    try:
+        c.start()
+        print(c)
+        del c['0']
+        print(c)
+
+        assert True
+    except:
+        assert False
+    c.stop()
+
 test_str()
 print("-"*10)
 test_int()
@@ -176,4 +191,6 @@ print("-"*10)
 test_call()
 print("-"*10)
 test_call2()
+print("-"*10)
+test_valueAccess()
 print("-"*10)

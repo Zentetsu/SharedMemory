@@ -9,9 +9,9 @@ Encapsulation of the python shared_memory library.
 * Mutex
 * Timeout for Mutex
 * Management of the availability of shared memory space
+* Adding overloaded methods for list and dict
 
 ### Future improvement
-* Adding overloaded methods for list and dict
 * Adding more tests
 
 ### Example

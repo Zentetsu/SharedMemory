@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-10-11	Zen	Server now able to run without Client
 2020-10-11	Zen	Updating overloaded methods for simple type
 2020-09-17	Zen	Adding overloaded methods
 2020-07-23	Zen	Fix availability when checking availability
@@ -64,22 +65,23 @@ class Server:
             SMNotDefined: raise an error when the shared memory with this name isn't defined
         """
         self.name = name
-
-        try:
-            self.sl = shared_memory.ShareableList(name=self.name)
-            self.sl_tmx = shared_memory.ShareableList(name=self.name + "_tmx")
-        except FileNotFoundError:
-            raise SMNotDefined(self.name)
-
         self.timeout = timeout
-        self.availability = True
-        self.sl_tmx[0] = json.dumps([json.loads(self.sl_tmx[0])[0], json.loads(self.sl_tmx[0])[1], self.availability])
-        self.client_availability = json.loads(self.sl_tmx[0])[1]
-        self.size = sys.getsizeof(json.loads(self.sl[0]))
-        self.type = type(json.loads(self.sl[0]))
-        self.value = json.loads(self.sl[0])
-        self.state = "Connected"
 
+        self.connect()
+
+        # try:
+        #     self.sl = shared_memory.ShareableList(name=self.name)
+        #     self.sl_tmx = shared_memory.ShareableList(name=self.name + "_tmx")
+        # except FileNotFoundError:
+        #     raise SMNotDefined(self.name)
+
+        # self.availability = True
+        # self.sl_tmx[0] = json.dumps([json.loads(self.sl_tmx[0])[0], json.loads(self.sl_tmx[0])[1], self.availability])
+        # self.client_availability = json.loads(self.sl_tmx[0])[1]
+        # self.size = sys.getsizeof(json.loads(self.sl[0]))
+        # self.type = type(json.loads(self.sl[0]))
+        # self.value = json.loads(self.sl[0])
+        # self.state = "Connected"
 
     def _checkClientAvailability(self):
         """Method to get the Client's availability
@@ -88,6 +90,7 @@ class Server:
             self.client_availability = json.loads(self.sl_tmx[0])[1]
         except:
             self.client_availability = False
+            self.state = "Disconnected"
 
     # @PendingDeprecationWarning
     def getValue(self):
@@ -161,7 +164,7 @@ class Server:
             return self.value[key]
         elif self.type == list:
             return self.value[key]
-        elif key == 0:
+        else:
             return self.value
 
     def __setitem__(self, key, value):
@@ -211,6 +214,10 @@ class Server:
         Returns:
             int: size of the shared data
         """
+        if self.type == list:
+            raise TypeError("Data shared type is list not dict.")
+
+        self._checkClientAvailability()
 
         self.value = json.loads(self.sl[0])
 
@@ -222,6 +229,10 @@ class Server:
         Returns:
             bool: boolean to determine if the element is or not into the shared data
         """
+        if self.type == list:
+            raise TypeError("Data shared type is list not dict.")
+
+        self._checkClientAvailability()
 
         self.value = json.loads(self.sl[0])
 
@@ -283,6 +294,8 @@ class Server:
             self.sl_tmx.shm.close()
         except FileNotFoundError:
             pass
+        except Exception:
+            print("WARNING: Client doesn't exist.")
 
     def unlink(self):
         """Method to remove the shared space from the memory
@@ -292,21 +305,49 @@ class Server:
             self.sl_tmx.shm.unlink()
         except FileNotFoundError:
             pass
+        except Exception:
+            print("WARNING: Client doesn't exist.")
+
+    # def connect(self):
+    #     """Method that connect Server to the Client shared memory
+    #     """
+    #     try:
+    #         self.state = "Connected"
+    #         self.availability = True
+
+    #         self.sl = shared_memory.ShareableList(name=self.name)
+    #         self.sl_tmx = shared_memory.ShareableList(name=self.name + "_tmx")
+
+    #         self.value = json.loads(self.sl[0])
+    #         self.sl_tmx[0] = json.dumps([json.loads(self.sl_tmx[0])[0], json.loads(self.sl_tmx[0])[1], self.availability])
+    #     except Exception:
+    #         self.state = "Disconnected"
 
     def connect(self):
         """Method that connect Server to the Client shared memory
         """
         try:
-            self.state = "Connected"
-            self.availability = True
-
             self.sl = shared_memory.ShareableList(name=self.name)
             self.sl_tmx = shared_memory.ShareableList(name=self.name + "_tmx")
 
-            self.value = json.loads(self.sl[0])
+            self.availability = True
             self.sl_tmx[0] = json.dumps([json.loads(self.sl_tmx[0])[0], json.loads(self.sl_tmx[0])[1], self.availability])
+            self.client_availability = json.loads(self.sl_tmx[0])[1]
+            self.size = sys.getsizeof(json.loads(self.sl[0]))
+            self.type = type(json.loads(self.sl[0]))
+            self.value = json.loads(self.sl[0])
+            self.state = "Connected"
         except Exception:
+            self.sl = None
+            self.sl_tmx = None
+
+            self.availability = True
+            self.client_availability = False
+            self.size = 0
+            self.type = None
+            self.value = None
             self.state = "Disconnected"
+            print("WARNING: Client not available.")
 
     def reconnect(self):
         """Method to reconnect to the shared memory

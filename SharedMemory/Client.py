@@ -226,7 +226,7 @@ class Client:
             return self.value[key]
         elif self.type == list:
             return self.value[key]
-        elif key == 0:
+        else:
             return self.value
 
     def __setitem__(self, key, value):

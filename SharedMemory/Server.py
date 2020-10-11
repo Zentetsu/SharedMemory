@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Sep 17 2020
+Last Modified: Sun Oct 11 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-10-11	Zen	Updating overloaded methods for simple type
 2020-09-17	Zen	Adding overloaded methods
 2020-07-23	Zen	Fix availability when checking availability
 2020-07-18	Zen	Adding method to get access to data availability information
@@ -160,6 +161,8 @@ class Server:
             return self.value[key]
         elif self.type == list:
             return self.value[key]
+        elif key == 0:
+            return self.value
 
     def __setitem__(self, key, value):
         """Method to update data of the shared space
@@ -196,6 +199,8 @@ class Server:
             self.value[key] = value
         elif self.type == list:
             self.value[key] = value
+        else:
+            self.value = value
 
         self.sl[0] = json.dumps(self.value)
         self.sl_tmx[0] = json.dumps([False, self.client_availability, self.availability])

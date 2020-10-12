@@ -39,7 +39,7 @@ HISTORY:
 2020-07-01	Zen	Creating file
 '''
 
-from context import Client
+# from context import Client
 from SharedMemory.Client import Client
 import contextlib
 

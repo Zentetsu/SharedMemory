@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sun Oct 11 2020
+Last Modified: Mon Oct 12 2020
 Modified By: Zentetsu
 
 ----
@@ -39,7 +39,7 @@ HISTORY:
 2020-07-01	Zen	Creating file
 '''
 
-# from context import Client
+from context import Client
 from SharedMemory.Client import Client
 import contextlib
 
@@ -236,7 +236,7 @@ def test_call2():
         assert False
 
 def test_valueAccess():
-    print("Deleting value from overloaded method", end=" ")
+    print("Deleting value from overloaded method:", end=" ")
     try:
         with contextlib.redirect_stdout(None):
             c = Client("test13", {'0':0, '1':1, '2':2, '3':3})

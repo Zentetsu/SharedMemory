@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Sep 17 2020
+Last Modified: Mon Oct 12 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-10-12	Zen	Updating test
 2020-07-23	Zen	Adding test for availability
 2020-07-18	Zen	Adding some tests
 2020-07-03	Zen	Updating test file
@@ -40,108 +41,150 @@ HISTORY:
 # from context import Client, Server
 from SharedMemory.Client import Client
 from SharedMemory.Server import Server
+import contextlib
 
 def test_connection():
-    c = Client("test1", "azerty")
+    print("Create Server instance without Client:", end=" ")
     try:
-        s = Server("test1")
+        with contextlib.redirect_stdout(None):
+            s = Server("test1")
+            s.stop()
         assert True
+        print("SUCCESSED")
     except:
+        print("FAILED")
         assert False
 
-    print(c)
-    print(s)
-    c.stop()
-    s.stop()
+def test_connection2():
+    print("Create Server instance with Client(after):", end=" ")
+    try:
+        with contextlib.redirect_stdout(None):
+            c = Client("test2", "azerty")
+            s = Server("test2")
+            assert s.getAvailability()[0] and s.getAvailability()[1]
+            c.stop()
+            s.stop()
+        print("SUCCESSED")
+    except:
+        print("FAILED")
+        assert False
+
+def test_connection3():
+    print("Create Server instance with Client(before):", end=" ")
+    try:
+        with contextlib.redirect_stdout(None):
+            s = Server("test3")
+            c = Client("test3", "azerty")
+            s.connect()
+            assert s.getAvailability()[0] and s.getAvailability()[1]
+            c.stop()
+            s.stop()
+        print("SUCCESSED")
+    except:
+        print("FAILED")
+        assert False
 
 def test_value():
-    c = Client("test2", "azerty")
-    s = Server("test2")
-    print(c)
-    print(s)
-    assert s.getValue() == "azerty"
-    c.stop()
-    s.stop()
+    print("Server check value \"azerty\":", end=" ")
+    try:
+        with contextlib.redirect_stdout(None):
+            c = Client("test3", "azerty")
+            s = Server("test3")
+            assert s.getValue() == "azerty"
+            c.stop()
+            s.stop()
+        print("SUCCESSED")
+    except:
+        print("FAILED")
+        assert False
 
-def test_edit_value():
-    c = Client("test3", "azerty")
-    s = Server("test3")
-    print(c)
-    print(s)
-    s.updateValue("toto")
-    assert c.getValue() == "toto"
-    print(c)
-    print(s)
-    c.stop()
-    s.stop()
+def test_editValue():
+    print("Server edit value \"azerty\" to \"ytreza\":", end=" ")
+    try:
+        with contextlib.redirect_stdout(None):
+            c = Client("test3", "azerty")
+            s = Server("test3")
+            s.updateValue("ytreza")
+            assert c.getValue() == "ytreza"
+            assert c[0]== "ytreza"
+            c.stop()
+            s.stop()
+        print("SUCCESSED")
+    except:
+        print("FAILED")
+        assert False
 
-def test_client_stopped():
-    c = Client("test4", "azerty")
-    s = Server("test4")
-    print(c)
-    print(s)
-    c.stop()
-    s.updateValue("toto")
-    assert s.getValue() == "azerty"
-    print(c)
-    print(s)
-    s.stop()
+def test_clientStopped():
+    print("Server test access value when Client stopped:", end=" ")
+    try:
+        with contextlib.redirect_stdout(None):
+            c = Client("test4", "azerty")
+            s = Server("test4")
+            c.stop()
+            s.updateValue("toto")
+            assert s.getValue() == "azerty"
+            assert s[0] == "azerty"
+            s.stop()
+        print("SUCCESSED")
+    except:
+        print("FAILED")
+        assert False
 
-def test_server_stopped():
-    c = Client("test5", "azerty")
-    s = Server("test5")
-    print(c)
-    print(s)
-    s.stop()
-    c.updateValue("toto")
-    assert c.getValue() == "toto"
-    print(s)
-    print(c)
-    s.connect()
-    print(c)
-    print(s)
-    c.stop()
+def test_serverStopped():
+    print("Client test access value when Server stopped:", end=" ")
+    try:
+        with contextlib.redirect_stdout(None):
+            c = Client("test5", "azerty")
+            s = Server("test5")
+            s.stop()
+            c.updateValue("toto")
+            assert c.getValue() == "toto"
+            assert c[0] == "toto"
+            s.connect()
+            c.stop()
+        print("SUCCESSED")
+    except:
+        print("FAILED")
+        assert False
 
-def test_call():
-    c = Client("test6", "azerty")
-    s = Server("test6")
-    print(c)
-    print(s)
-    s.stop()
-    s.stop()
-    c.stop()
-
-def test_call2():
-    c = Client("test7", "azerty")
-    s = Server("test7")
-    print(c)
-    print(s)
-    s.connect()
-    s.stop()
-    c.stop()
+def test_multiStop():
+    print("Server test mutli stop:", end=" ")
+    try:
+        with contextlib.redirect_stdout(None):
+            c = Client("test6", "azerty")
+            s = Server("test6")
+            s.stop()
+            s.stop()
+            c.stop()
+        assert True
+        print("SUCCESSED")
+    except:
+        print("FAILED")
+        assert False
 
 def test_availability():
-    c = Client("test7", "azerty")
-    s = Server("test7")
-    assert c.getAvailability() == (True, True)
-    print(c)
-    assert s.getAvailability() == (True, True)
-    print(s)
-    s.stop()
-    c.stop()
+    print("Check availability for Client and Server:", end=" ")
+    try:
+        with contextlib.redirect_stdout(None):
+            c = Client("test7", "azerty")
+            s = Server("test7")
+            assert c.getAvailability() == (True, True)
+            assert s.getAvailability() == (True, True)
+            s.stop()
+            c.stop()
+        print("SUCCESSED")
+    except:
+        print("FAILED")
+        assert False
 
 print("-"*10)
 test_connection()
-print("-"*10)
+test_connection2()
+test_connection3()
 test_value()
-print("-"*10)
-test_edit_value()
-print("-"*10)
-test_client_stopped()
-print("-"*10)
-test_server_stopped()
-print("-"*10)
-test_call()
-print("-"*10)
+test_editValue()
+test_clientStopped()
+test_serverStopped()
+test_multiStop()
 test_availability()
 print("-"*10)

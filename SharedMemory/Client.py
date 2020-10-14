@@ -112,7 +112,6 @@ class Client:
             raise TypeError("Data type must be dict")
 
         file = open(path, 'w+')
-        print(type(self.getValue()))
         json.dump(self.getValue(), file)
         file.close()
 

@@ -31,7 +31,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
-2020-10-14	Zen	Adding test for JSON export
 2020-10-11	Zen	Updating test
 2020-09-17	Zen	Adding test for overloaded methods
 2020-07-18	Zen	Adding new tests
@@ -43,7 +42,6 @@ HISTORY:
 # from context import Client
 from SharedMemory.Client import Client
 import contextlib
-import json
 
 def test_str():
     print("Create Client instance containing a \"string\":", end=" ")
@@ -251,21 +249,6 @@ def test_valueAccess():
         print("FAILED")
         assert False
 
-def test_JSONExport():
-    print("Exporting data to JSON file:", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = Client("test13", {'0':0, '1':1, '2':2, '3':3})
-            c.exportToJSON("exp.json")
-            json_file = open("exp.json")
-            value = json.load(json_file)
-            assert value == c.getValue()
-            json_file.close()
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
-
 
 print("-"*10)
 test_str()
@@ -282,5 +265,4 @@ test_stop()
 test_call()
 test_call2()
 test_valueAccess()
-test_JSONExport()
 print("-"*10)

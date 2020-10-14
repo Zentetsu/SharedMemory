@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sun Oct 11 2020
+Last Modified: Wed Oct 14 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-10-14	Zen	Adding export method
 2020-10-11	Zen	Updating overloaded methods for simple type
 2020-09-17	Zen	Adding overloaded methods
 2020-07-23	Zen	Fix availability when checking availability
@@ -101,6 +102,20 @@ class Client:
 
         return value
 
+    def exportToJSON(self, path:str):
+        """Method to export dict to JSON file
+
+        Args:
+            path (str): file path
+        """
+        if self.type is not dict:
+            raise TypeError("Data type must be dict")
+
+        file = open(path, 'w+')
+        print(type(self.getValue()))
+        json.dump(self.getValue(), file)
+        file.close()
+
     def _checkValue(self, value):
         """Method to check if value isn't a dict or list and to initialize
 
@@ -135,8 +150,6 @@ class Client:
 
         self.size = sys.getsizeof(self.value)
 
-        print(self.value)
-
         self.start()
 
     def _checkServerAvailability(self):
@@ -162,7 +175,6 @@ class Client:
             self.server_availability_ls = False
             self.restart()
 
-        print(self.value)
         self.value = json.loads(self.sl[0])
 
         return self.value

@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Wed Oct 14 2020
+Last Modified: Thu Oct 15 2020
 Modified By: Zentetsu
 
 ----
@@ -107,7 +107,7 @@ def test_dict1():
         with contextlib.redirect_stdout(None):
             c = Client("test5", {'a': 1})
             assert type(c.getValue()) is dict
-            assert c.type is dict
+            assert c.getType() is dict
             assert c.getValue()['a'] == 1
             assert c['a'] == 1
             c.stop()
@@ -122,7 +122,7 @@ def test_list1():
         with contextlib.redirect_stdout(None):
             c = Client("test6", [0, 1])
             assert type(c.getValue()) is list
-            assert c.type is list
+            assert c.getType() is list
             assert c.getValue()[0] == 0
             assert c.getValue()[1] == 1
             assert c[0] == 0
@@ -139,7 +139,7 @@ def test_list2():
         with contextlib.redirect_stdout(None):
             c = Client("test7", [int, bool, str])
             assert type(c.getValue()) is list
-            assert c.type is list
+            assert c.getType() is list
             assert type(c.getValue()[0]) is int
             assert type(c.getValue()[1]) is bool
             assert type(c.getValue()[2]) is str
@@ -158,7 +158,7 @@ def test_list3():
         with contextlib.redirect_stdout(None):
             c = Client("test8", [int, 10.2, str])
             assert type(c.getValue()) is list
-            assert c.type is list
+            assert c.getType() is list
             assert type(c.getValue()[0]) is int
             assert type(c.getValue()[1]) is float
             assert type(c.getValue()[2]) is str

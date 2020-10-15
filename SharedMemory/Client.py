@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Wed Oct 14 2020
+Last Modified: Thu Oct 15 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-10-15	Zen	Updating private status of varaibles and methods
 2020-10-14	Zen	Adding export method
 2020-10-11	Zen	Updating overloaded methods for simple type
 2020-09-17	Zen	Adding overloaded methods
@@ -72,22 +73,22 @@ class Client:
         if value is None and path is None or value is not None and path is not None:
             raise SMMultiInputError
         elif value is None:
-            self.value = self._initValueByJSON(path)
+            self.__value = self.__initValueByJSON(path)
         else:
-            self.value = value
-            self.size = size
+            self.__value = value
+            self.__size = size
 
-        self.timeout = timeout
-        self.type = type(self.value)
-        self.name = name
-        self.state = "Stopped"
-        self.availability = False
-        self.server_availability = False
-        self.server_availability_ls = False
+        self.__timeout = timeout
+        self.__type = type(self.__value)
+        self.__name = name
+        self.__state = "Stopped"
+        self.__availability = False
+        self.__server_availability = False
+        self.__server_availability_ls = False
 
-        self._initSharedMemory()
+        self.__initSharedMemory()
 
-    def _initValueByJSON(self, path:str)->dict:
+    def __initValueByJSON(self, path:str)->dict:
         """Method to extract value from a JSON file
 
         Args:
@@ -108,14 +109,14 @@ class Client:
         Args:
             path (str): file path
         """
-        if self.type is not dict:
+        if self.__type is not dict:
             raise TypeError("Data type must be dict")
 
         file = open(path, 'w+')
         json.dump(self.getValue(), file)
         file.close()
 
-    def _checkValue(self, value):
+    def __checkValue(self, value):
         """Method to check if value isn't a dict or list and to initialize
 
         Args:
@@ -128,7 +129,7 @@ class Client:
             [type]: return the initialized value
         """
         if value is str:
-            value = " " * self.size
+            value = " " * self.__size
         elif value is int:
             value = 0
         elif value is float:
@@ -140,25 +141,25 @@ class Client:
 
         return value
 
-    def _initSharedMemory(self):
+    def __initSharedMemory(self):
         """Method to initialize the shared space
         """
-        if type(self.value) is list and type in [type(e) for e in self.value]:
-            for i in range(0, len(self.value)):
-                self.value[i] = self._checkValue(self.value[i])
+        if type(self.__value) is list and type in [type(e) for e in self.__value]:
+            for i in range(0, len(self.__value)):
+                self.__value[i] = self.__checkValue(self.__value[i])
 
-        self.size = sys.getsizeof(self.value)
+        self.__size = sys.getsizeof(self.__value)
 
         self.start()
 
-    def _checkServerAvailability(self):
+    def __checkServerAvailability(self):
         """Method to get the Server's availability
         """
         try:
-            self.server_availability = json.loads(self.sl_tmx[0])[2]
-            self.server_availability_ls = self.server_availability
+            self.__server_availability = json.loads(self.sl_tmx[0])[2]
+            self.__server_availability_ls = self.__server_availability
         except:
-            self.server_availability = False
+            self.__server_availability = False
 
     # @PendingDeprecationWarning
     def getValue(self):
@@ -167,16 +168,24 @@ class Client:
         Returns:
             [type]: return data from the shared space
         """
-        self._checkServerAvailability()
+        self.__checkServerAvailability()
 
-        if not self.server_availability:# and self.server_availability_ls:
+        if not self.__server_availability:# and self.__server_availability_ls:
             print("INFO: Server unavailable, restarting shared memory space.")
-            self.server_availability_ls = False
+            self.__server_availability_ls = False
             self.restart()
 
-        self.value = json.loads(self.sl[0])
+        self.__value = json.loads(self.sl[0])
 
-        return self.value
+        return self.__value
+
+    def getType(self):
+        """Method that returns data type
+
+        Returns:
+            [type]: data type
+        """
+        return self.__type
 
     # @PendingDeprecationWarning
     def updateValue(self, n_value):
@@ -189,32 +198,32 @@ class Client:
             SMTypeError: raise en error when the new value is not correspoding to the initial type
             SMSizeError: raise an error when the size of the new value exced the previous one
         """
-        self._checkServerAvailability()
+        self.__checkServerAvailability()
 
-        if not self.server_availability:# and self.server_availability_ls:
+        if not self.__server_availability:# and self.__server_availability_ls:
             print("INFO: Server unavailable, restarting shared memory space.")
-            self.server_availability_ls = False
+            self.__server_availability_ls = False
             self.restart()
 
         start = time.time()
 
         while json.loads(self.sl_tmx[0])[0]:
-            if (time.time() - start) > self.timeout:
+            if (time.time() - start) > self.__timeout:
                 print("WARNING: timeout MUTEX.")
                 return
 
-        self.sl_tmx[0] = json.dumps([True, self.availability, self.server_availability])
-        self.value = json.loads(self.sl[0])
+        self.sl_tmx[0] = json.dumps([True, self.__availability, self.__server_availability])
+        self.__value = json.loads(self.sl[0])
 
-        if type(n_value) is not self.type:
+        if type(n_value) is not self.__type:
             raise SMTypeError(type(n_value))
 
-        if sys.getsizeof(n_value) > self.size:
+        if sys.getsizeof(n_value) > self.__size:
             raise SMSizeError
 
-        self.value = n_value
-        self.sl[0] = json.dumps(self.value)
-        self.sl_tmx[0] = json.dumps([False, self.availability, self.server_availability])
+        self.__value = n_value
+        self.sl[0] = json.dumps(self.__value)
+        self.sl_tmx[0] = json.dumps([False, self.__availability, self.__server_availability])
 
     def __getitem__(self, key):
         """Method to get item value from the shared data
@@ -222,23 +231,23 @@ class Client:
         Args:
             key ([type]): key
         """
-        self._checkServerAvailability()
+        self.__checkServerAvailability()
 
-        if not self.server_availability:# and self.server_availability_ls:
+        if not self.__server_availability:# and self.__server_availability_ls:
             print("INFO: Server unavailable, restarting shared memory space.")
-            self.server_availability_ls = False
+            self.__server_availability_ls = False
             self.restart()
 
-        self.value = json.loads(self.sl[0])
+        self.__value = json.loads(self.sl[0])
 
-        if self.type == dict:
+        if self.__type == dict:
             if type(key) is int:
                 key = str(key)
-            return self.value[key]
-        elif self.type == list:
-            return self.value[key]
+            return self.__value[key]
+        elif self.__type == list:
+            return self.__value[key]
         else:
-            return self.value
+            return self.__value
 
     def __setitem__(self, key, value):
         """Method to update data of the shared space
@@ -250,43 +259,43 @@ class Client:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
-        if self.type == list:
+        if self.__type == list:
             raise TypeError("Data shared type is list not dict.")
 
-        self._checkServerAvailability()
+        self.__checkServerAvailability()
 
-        if not self.server_availability:# and self.server_availability_ls:
+        if not self.__server_availability:# and self.__server_availability_ls:
             print("INFO: Server unavailable, restarting shared memory space.")
-            self.server_availability_ls = False
+            self.__server_availability_ls = False
             self.restart()
 
         start = time.time()
 
         while json.loads(self.sl_tmx[0])[0]:
-            if (time.time() - start) > self.timeout:
+            if (time.time() - start) > self.__timeout:
                 print("WARNING: timeout MUTEX.")
                 return
 
-        self.sl_tmx[0] = json.dumps([True, self.availability, self.server_availability])
-        self.value = json.loads(self.sl[0])
+        self.sl_tmx[0] = json.dumps([True, self.__availability, self.__server_availability])
+        self.__value = json.loads(self.sl[0])
 
         if type(key) is int:
             key = str(key)
 
-        if self.type == dict:
+        if self.__type == dict:
             if type(key) is int:
                 key = str(key)
-            self.value[key] = value
-        elif self.type == list:
-            self.value[key] = value
+            self.__value[key] = value
+        elif self.__type == list:
+            self.__value[key] = value
         else:
-            self.value = value
+            self.__value = value
 
-        if sys.getsizeof(self.value) > self.size:
+        if sys.getsizeof(self.__value) > self.__size:
             raise SMSizeError
 
-        self.sl[0] = json.dumps(self.value)
-        self.sl_tmx[0] = json.dumps([False, self.availability, self.server_availability])
+        self.sl[0] = json.dumps(self.__value)
+        self.sl_tmx[0] = json.dumps([False, self.__availability, self.__server_availability])
 
     def __len__(self):
         """Method that returns the size of the shared data
@@ -294,16 +303,16 @@ class Client:
         Returns:
             int: size of the shared data
         """
-        self._checkServerAvailability()
+        self.__checkServerAvailability()
 
-        if not self.server_availability:# and self.server_availability_ls:
+        if not self.__server_availability:# and self.__server_availability_ls:
             print("INFO: Server unavailable, restarting shared memory space.")
-            self.server_availability_ls = False
+            self.__server_availability_ls = False
             self.restart()
 
-        self.value = json.loads(self.sl[0])
+        self.__value = json.loads(self.sl[0])
 
-        return self.value.__len__()
+        return self.__value.__len__()
 
     def __contains__(self, key):
         """Method to check if an element is into the shared data
@@ -314,16 +323,16 @@ class Client:
         Returns:
             bool: boolean to determine if the element is or not into the shared data
         """
-        self._checkServerAvailability()
+        self.__checkServerAvailability()
 
-        if not self.server_availability:# and self.server_availability_ls:
+        if not self.__server_availability:# and self.__server_availability_ls:
             print("INFO: Server unavailable, restarting shared memory space.")
-            self.server_availability_ls = False
+            self.__server_availability_ls = False
             self.restart()
 
-        self.value = json.loads(self.sl[0])
+        self.__value = json.loads(self.sl[0])
 
-        return self.value.__contains__(key)
+        return self.__value.__contains__(key)
 
     def __delitem__(self, key):
         """Method to remove an element from the shared data
@@ -331,27 +340,27 @@ class Client:
         Args:
             key ([type]): Element to remove
         """
-        self._checkServerAvailability()
+        self.__checkServerAvailability()
 
-        if not self.server_availability:# and self.server_availability_ls:
+        if not self.__server_availability:# and self.__server_availability_ls:
             print("INFO: Server unavailable, restarting shared memory space.")
-            self.server_availability_ls = False
+            self.__server_availability_ls = False
             self.restart()
 
         start = time.time()
 
         while json.loads(self.sl_tmx[0])[0]:
-            if (time.time() - start) > self.timeout:
+            if (time.time() - start) > self.__timeout:
                 print("WARNING: timeout MUTEX.")
                 return
 
-        self.sl_tmx[0] = json.dumps([True, self.availability, self.server_availability])
-        self.value = json.loads(self.sl[0])
+        self.sl_tmx[0] = json.dumps([True, self.__availability, self.__server_availability])
+        self.__value = json.loads(self.sl[0])
 
-        self.value.__delitem__(key)
+        self.__value.__delitem__(key)
 
-        self.sl[0] = json.dumps(self.value)
-        self.sl_tmx[0] = json.dumps([False, self.availability, self.server_availability])
+        self.sl[0] = json.dumps(self.__value)
+        self.sl_tmx[0] = json.dumps([False, self.__availability, self.__server_availability])
 
     def getStatus(self) -> str:
         """Method that return shared memory state
@@ -359,7 +368,7 @@ class Client:
         Returns:
             str: shared memory state
         """
-        return self.state
+        return self.__state
 
     def getAvailability(self) -> [bool, bool]:
         """Method that return the availability of Client and Server
@@ -367,9 +376,9 @@ class Client:
         Returns:
             [bool, bool]: Client and Server availability status
         """
-        self._checkServerAvailability()
+        self.__checkServerAvailability()
 
-        return self.availability, self.server_availability
+        return self.__availability, self.__server_availability
 
     def close(self):
         """Method to close the shared space
@@ -392,16 +401,16 @@ class Client:
     def start(self):
         """Method that create shared memory space
         """
-        if self.state == "Started":
+        if self.__state == "Started":
             print("INFO: Client already started.")
             return
 
-        self.state = "Started"
-        self.availability = True
+        self.__state = "Started"
+        self.__availability = True
 
         try:
-            self.sl = shared_memory.ShareableList([json.dumps(self.value)], name=self.name,)
-            self.sl_tmx = shared_memory.ShareableList([json.dumps([False, self.availability, self.server_availability])], name=self.name + "_tmx")
+            self.sl = shared_memory.ShareableList([json.dumps(self.__value)], name=self.__name,)
+            self.sl_tmx = shared_memory.ShareableList([json.dumps([False, self.__availability, self.__server_availability])], name=self.__name + "_tmx")
         except Exception:
             pass
 
@@ -414,13 +423,13 @@ class Client:
     def stop(self):
         """Method that calls stop and unlink method
         """
-        if self.state == "Stopped":
+        if self.__state == "Stopped":
             print("INFO: Client already stopped.")
             return
 
-        self.state = "Stopped"
-        self.availability = False
-        self.sl_tmx[0] = json.dumps([False, self.availability, self.server_availability])
+        self.__state = "Stopped"
+        self.__availability = False
+        self.sl_tmx[0] = json.dumps([False, self.__availability, self.__server_availability])
 
         self.close()
         self.unlink()
@@ -431,12 +440,12 @@ class Client:
         Returns:
             str: printable value of Client Class instance
         """
-        self._checkServerAvailability()
+        self.__checkServerAvailability()
 
-        s = "Client: " + self.name + "\n"\
-            + "\tStatus: " + self.state + "\n"\
-            + "\tAvailable: " + self.availability.__repr__() + "\n"\
-            + "\tServer Available: " + self.server_availability.__repr__() + "\n"\
-            + "\tValue: " + self.value.__repr__()
+        s = "Client: " + self.__name + "\n"\
+            + "\tStatus: " + self.__state + "\n"\
+            + "\tAvailable: " + self.__availability.__repr__() + "\n"\
+            + "\tServer Available: " + self.__server_availability.__repr__() + "\n"\
+            + "\tValue: " + self.__value.__repr__()
 
         return s

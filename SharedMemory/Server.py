@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Oct 15 2020
+Last Modified: Thu Dec 10 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-12-10	Zen	Adding log file
 2020-10-15	Zen	Updating private status of varaibles and methods
 2020-10-11	Zen	Server now able to run without Client
 2020-10-11	Zen	Updating overloaded methods for simple type
@@ -47,6 +48,7 @@ HISTORY:
 
 from .SMError import SMTypeError, SMSizeError, SMNotDefined
 from multiprocessing import shared_memory
+import logging
 import json
 import time
 import sys
@@ -55,7 +57,7 @@ import sys
 class Server:
     """Client class focused on receiving data from Client
     """
-    def __init__(self, name, timeout=10):
+    def __init__(self, name:str, timeout:int=10, log:str=None):
         """Class constructor
 
         Args:
@@ -67,6 +69,11 @@ class Server:
         """
         self.__name = name
         self.__timeout = timeout
+        self.__log = log
+
+        if self.__log is not None:
+            logging.basicConfig(filename=self.__log, format='%(asctime)s:%(name)s:%(levelname)s:%(message)s', level=logging.DEBUG)
+            self.__writeLog(0, "Starting SharedMemory Server...")
 
         self.connect()
 
@@ -89,7 +96,10 @@ class Server:
         self.__checkClientAvailability()
 
         if not self.__client_availability:
-            print("WARNING: Unable to get data due to the Client's unavailability.")
+            if self.__log is not None:
+                self.__writeLog(3, "Unable to get data due to the Client's unavailability.")
+            else:
+                print("WARNING: Unable to get data due to the Client's unavailability.")
         else:
             self.__value = json.loads(self.__sl[0])
 
@@ -117,14 +127,20 @@ class Server:
         self.__checkClientAvailability()
 
         if not self.__client_availability:
-            print("WARNING: Unable to update data due to the Client's unavailability.")
+            if self.__log is not None:
+                self.__writeLog(3, "Unable to update data due to the Client's unavailability.")
+            else:
+                print("WARNING: Unable to get data due to the Client's unavailability.")
             return
 
         start = time.time()
 
         while json.loads(self.__sl_tmx[0])[0]:
             if (time.time() - start) > self.__timeout:
-                print("WARNING: timeout MUTEX.")
+                if self.__log is not None:
+                    self.__writeLog(3, "timeout MUTEX.")
+                else:
+                    print("WARNING: timeout MUTEX.")
                 return
 
         self.__sl_tmx[0] = json.dumps([True, self.__client_availability, self.__availability])
@@ -149,7 +165,10 @@ class Server:
         self.__checkClientAvailability()
 
         if not self.__client_availability:
-            print("WARNING: Unable to get data due to the Client's unavailability.")
+            if self.__log is not None:
+                self.__writeLog(3, "Unable to get data due to the Client's unavailability.")
+            else:
+                print("WARNING: Unable to get data due to the Client's unavailability.")
         else:
             self.__value = json.loads(self.__sl[0])
 
@@ -178,14 +197,20 @@ class Server:
         self.__checkClientAvailability()
 
         if not self.__client_availability:
-            print("WARNING: Unable to update data due to the Client's unavailability.")
+            if self.__log is not None:
+                self.__writeLog(3, "Unable to update data due to the Client's unavailability.")
+            else:
+                print("WARNING: Unable to get data due to the Client's unavailability.")
             return
 
         start = time.time()
 
         while json.loads(self.__sl_tmx[0])[0]:
             if (time.time() - start) > self.__timeout:
-                print("WARNING: timeout MUTEX.")
+                if self.__log is not None:
+                    self.__writeLog(3, "timeout MUTEX.")
+                else:
+                    print("WARNING: timeout MUTEX.")
                 return
 
         self.__sl_tmx[0] = json.dumps([True, self.__client_availability, self.__availability])
@@ -210,6 +235,10 @@ class Server:
             int: size of the shared data
         """
         if self.__type == list:
+            if self.__log is not None:
+                self.__writeLog(1, "Data shared type is list not dict.")
+            else:
+                print("ERROR: Data shared type is list not dict.")
             raise TypeError("Data shared type is list not dict.")
 
         self.__checkClientAvailability()
@@ -225,6 +254,10 @@ class Server:
             bool: boolean to determine if the element is or not into the shared data
         """
         if self.__type == list:
+            if self.__log is not None:
+                self.__writeLog(1, "Data shared type is list not dict.")
+            else:
+                print("ERROR: Data shared type is list not dict.")
             raise TypeError("Data shared type is list not dict.")
 
         self.__checkClientAvailability()
@@ -240,19 +273,29 @@ class Server:
             key ([type]): Element to remove
         """
         if self.__type == list:
+            if self.__log is not None:
+                self.__writeLog(1, "Data shared type is list not dict.")
+            else:
+                print("ERROR: Data shared type is list not dict.")
             raise TypeError("Data shared type is list not dict.")
 
         self.__checkClientAvailability()
 
         if not self.__client_availability:
-            print("WARNING: Unable to update data due to the Client's unavailability.")
+            if self.__log is not None:
+                self.__writeLog(3, "Unable to update data due to the Client's unavailability.")
+            else:
+                print("WARNING: Unable to get data due to the Client's unavailability.")
             return
 
         start = time.time()
 
         while json.loads(self.__sl_tmx[0])[0]:
             if (time.time() - start) > self.__timeout:
-                print("WARNING: timeout MUTEX.")
+                if self.__log is not None:
+                    self.__writeLog(3, "timeout MUTEX.")
+                else:
+                    print("WARNING: timeout MUTEX.")
                 return
 
         self.__sl_tmx[0] = json.dumps([True, self.__client_availability, self.__availability])
@@ -290,7 +333,10 @@ class Server:
         except FileNotFoundError:
             pass
         except Exception:
-            print("WARNING: Client doesn't exist.")
+            if self.__log is not None:
+                self.__writeLog(3, "Client doesn't exist.")
+            else:
+                print("WARNING: Client doesn't exist.")
 
     def unlink(self):
         """Method to remove the shared space from the memory
@@ -301,7 +347,10 @@ class Server:
         except FileNotFoundError:
             pass
         except Exception:
-            print("WARNING: Client doesn't exist.")
+            if self.__log is not None:
+                self.__writeLog(3, "Client doesn't exist.")
+            else:
+                print("WARNING: Client doesn't exist.")
 
     def connect(self):
         """Method that connect Server to the Client shared memory
@@ -327,7 +376,10 @@ class Server:
             self.__type = None
             self.__value = None
             self.__state = "Disconnected"
-            print("WARNING: Client not available.")
+            if self.__log is not None:
+                self.__writeLog(3, "Client not available.")
+            else:
+                print("WARNING: Client not available.")
 
     def reconnect(self):
         """Method to reconnect to the shared memory
@@ -339,7 +391,10 @@ class Server:
         """Method that calls stop and unlink method
         """
         if self.__state == "Disconnected":
-            print("INFO: Client already disconnected.")
+            if self.__log is not None:
+                self.__writeLog(0, "Client already disconnected.")
+            else:
+                print("INFO: Client already disconnected.")
             return
 
         self.__state = "Disconnected"
@@ -348,6 +403,22 @@ class Server:
 
         self.close()
         self.unlink()
+
+    def __writeLog(self, log_id:int, message:str):
+        """Write information into a log file
+
+        Args:
+            log_id (int): log id
+            message (str): message to write into the log file
+        """
+        if log_id == 0:
+            logging.info(message)
+        elif log_id == 1:
+            logging.error(message)
+        elif log_id == 2:
+            logging.debug(message)
+        elif log_id == 3:
+            logging.warning(message)
 
     def __repr__(self):
         """Redefined method to print value of the Server Class instance

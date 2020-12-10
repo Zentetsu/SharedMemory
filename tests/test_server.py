@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Oct 15 2020
+Last Modified: Thu Dec 10 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-12-10	Zen	Updating test for log file
 2020-10-12	Zen	Updating test
 2020-07-23	Zen	Adding test for availability
 2020-07-18	Zen	Adding some tests
@@ -46,9 +47,9 @@ import contextlib
 def test_connection():
     print("Create Server instance without Client:", end=" ")
     try:
-        with contextlib.redirect_stdout(None):
-            s = Server("test1")
-            s.stop()
+        # with contextlib.redirect_stdout(None):
+        s = Server("test1", log="./test_server.log")
+        s.stop()
         assert True
         print("SUCCESSED")
     except:
@@ -58,12 +59,12 @@ def test_connection():
 def test_connection2():
     print("Create Server instance with Client(after):", end=" ")
     try:
-        with contextlib.redirect_stdout(None):
-            c = Client("test2", "azerty")
-            s = Server("test2")
-            assert s.getAvailability()[0] and s.getAvailability()[1]
-            c.stop()
-            s.stop()
+        # with contextlib.redirect_stdout(None):
+        c = Client("test2", "azerty", log="./test_server.log")
+        s = Server("test2", log="./test_server.log")
+        assert s.getAvailability()[0] and s.getAvailability()[1]
+        c.stop()
+        s.stop()
         print("SUCCESSED")
     except:
         print("FAILED")
@@ -72,13 +73,13 @@ def test_connection2():
 def test_connection3():
     print("Create Server instance with Client(before):", end=" ")
     try:
-        with contextlib.redirect_stdout(None):
-            s = Server("test3")
-            c = Client("test3", "azerty")
-            s.connect()
-            assert s.getAvailability()[0] and s.getAvailability()[1]
-            c.stop()
-            s.stop()
+        # with contextlib.redirect_stdout(None):
+        s = Server("test3", log="./test_server.log")
+        c = Client("test3", "azerty", log="./test_server.log")
+        s.connect()
+        assert s.getAvailability()[0] and s.getAvailability()[1]
+        c.stop()
+        s.stop()
         print("SUCCESSED")
     except:
         print("FAILED")
@@ -87,12 +88,12 @@ def test_connection3():
 def test_value():
     print("Server check value \"azerty\":", end=" ")
     try:
-        with contextlib.redirect_stdout(None):
-            c = Client("test3", "azerty")
-            s = Server("test3")
-            assert s.getValue() == "azerty"
-            c.stop()
-            s.stop()
+        # with contextlib.redirect_stdout(None):
+        c = Client("test3", "azerty", log="./test_server.log")
+        s = Server("test3", log="./test_server.log")
+        assert s.getValue() == "azerty"
+        c.stop()
+        s.stop()
         print("SUCCESSED")
     except:
         print("FAILED")
@@ -101,14 +102,14 @@ def test_value():
 def test_editValue():
     print("Server edit value \"azerty\" to \"ytreza\":", end=" ")
     try:
-        with contextlib.redirect_stdout(None):
-            c = Client("test3", "azerty")
-            s = Server("test3")
-            s.updateValue("ytreza")
-            assert c.getValue() == "ytreza"
-            assert c[0]== "ytreza"
-            c.stop()
-            s.stop()
+        # with contextlib.redirect_stdout(None):
+        c = Client("test3", "azerty", log="./test_server.log")
+        s = Server("test3", log="./test_server.log")
+        s.updateValue("ytreza")
+        assert c.getValue() == "ytreza"
+        assert c[0]== "ytreza"
+        c.stop()
+        s.stop()
         print("SUCCESSED")
     except:
         print("FAILED")
@@ -117,14 +118,14 @@ def test_editValue():
 def test_clientStopped():
     print("Server test access value when Client stopped:", end=" ")
     try:
-        with contextlib.redirect_stdout(None):
-            c = Client("test4", "azerty")
-            s = Server("test4")
-            c.stop()
-            s.updateValue("toto")
-            assert s.getValue() == "azerty"
-            assert s[0] == "azerty"
-            s.stop()
+        # with contextlib.redirect_stdout(None):
+        c = Client("test4", "azerty", log="./test_server.log")
+        s = Server("test4", log="./test_server.log")
+        c.stop()
+        s.updateValue("toto")
+        assert s.getValue() == "azerty"
+        assert s[0] == "azerty"
+        s.stop()
         print("SUCCESSED")
     except:
         print("FAILED")
@@ -133,15 +134,15 @@ def test_clientStopped():
 def test_serverStopped():
     print("Client test access value when Server stopped:", end=" ")
     try:
-        with contextlib.redirect_stdout(None):
-            c = Client("test5", "azerty")
-            s = Server("test5")
-            s.stop()
-            c.updateValue("toto")
-            assert c.getValue() == "toto"
-            assert c[0] == "toto"
-            s.connect()
-            c.stop()
+        # with contextlib.redirect_stdout(None):
+        c = Client("test5", "azerty", log="./test_server.log")
+        s = Server("test5", log="./test_server.log")
+        s.stop()
+        c.updateValue("toto")
+        assert c.getValue() == "toto"
+        assert c[0] == "toto"
+        s.connect()
+        c.stop()
         print("SUCCESSED")
     except:
         print("FAILED")
@@ -150,12 +151,12 @@ def test_serverStopped():
 def test_multiStop():
     print("Server test mutli stop:", end=" ")
     try:
-        with contextlib.redirect_stdout(None):
-            c = Client("test6", "azerty")
-            s = Server("test6")
-            s.stop()
-            s.stop()
-            c.stop()
+        # with contextlib.redirect_stdout(None):
+        c = Client("test6", "azerty", log="./test_server.log")
+        s = Server("test6", log="./test_server.log")
+        s.stop()
+        s.stop()
+        c.stop()
         assert True
         print("SUCCESSED")
     except:
@@ -165,13 +166,13 @@ def test_multiStop():
 def test_availability():
     print("Check availability for Client and Server:", end=" ")
     try:
-        with contextlib.redirect_stdout(None):
-            c = Client("test7", "azerty")
-            s = Server("test7")
-            assert c.getAvailability() == (True, True)
-            assert s.getAvailability() == (True, True)
-            s.stop()
-            c.stop()
+        # with contextlib.redirect_stdout(None):
+        c = Client("test7", "azerty", log="./test_server.log")
+        s = Server("test7", log="./test_server.log")
+        assert c.getAvailability() == (True, True)
+        assert s.getAvailability() == (True, True)
+        s.stop()
+        c.stop()
         print("SUCCESSED")
     except:
         print("FAILED")

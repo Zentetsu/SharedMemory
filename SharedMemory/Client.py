@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Oct 15 2020
+Last Modified: Thu Dec 10 2020
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2020-12-10	Zen	Adding log file
 2020-10-15	Zen	Updating private status of varaibles and methods
 2020-10-14	Zen	Adding export method
 2020-10-11	Zen	Updating overloaded methods for simple type
@@ -49,6 +50,7 @@ HISTORY:
 
 from .SMError import SMTypeError, SMSizeError, SMMultiInputError
 from multiprocessing import shared_memory
+import logging
 import json
 import time
 import sys
@@ -57,7 +59,7 @@ import sys
 class Client:
     """Client class focused on sharing data with a Server
     """
-    def __init__(self, name:str, value=None, path:str=None, size:int=10, timeout:int=1):
+    def __init__(self, name:str, value=None, path:str=None, size:int=10, timeout:int=1, log:str=None):
         """Class constructor
 
         Args:
@@ -70,6 +72,13 @@ class Client:
         Raises:
             SMMultiInputError: raise an error when value and path are both at None or initialized
         """
+        self.__log = log
+
+        if self.__log is not None:
+            logging.basicConfig(filename=self.__log, format='%(asctime)s:%(name)s:%(levelname)s:%(message)s', level=logging.DEBUG)
+            self.__writeLog(0, "Starting SharedMemory Client...")
+
+
         if value is None and path is None or value is not None and path is not None:
             raise SMMultiInputError
         elif value is None:
@@ -110,6 +119,10 @@ class Client:
             path (str): file path
         """
         if self.__type is not dict:
+            if self.__log is not None:
+                self.__writeLog(1, "Data type must be dict")
+            else:
+                print("INFO: Data type must be dict")
             raise TypeError("Data type must be dict")
 
         file = open(path, 'w+')
@@ -171,7 +184,10 @@ class Client:
         self.__checkServerAvailability()
 
         if not self.__server_availability:# and self.__server_availability_ls:
-            print("INFO: Server unavailable, restarting shared memory space.")
+            if self.__log is not None:
+                self.__writeLog(0, "Server unavailable, restarting shared memory space.")
+            else:
+                print("INFO: Server unavailable, restarting shared memory space.")
             self.__server_availability_ls = False
             self.restart()
 
@@ -201,7 +217,10 @@ class Client:
         self.__checkServerAvailability()
 
         if not self.__server_availability:# and self.__server_availability_ls:
-            print("INFO: Server unavailable, restarting shared memory space.")
+            if self.__log is not None:
+                self.__writeLog(0, "Server unavailable, restarting shared memory space.")
+            else:
+                print("INFO: Server unavailable, restarting shared memory space.")
             self.__server_availability_ls = False
             self.restart()
 
@@ -209,7 +228,10 @@ class Client:
 
         while json.loads(self.sl_tmx[0])[0]:
             if (time.time() - start) > self.__timeout:
-                print("WARNING: timeout MUTEX.")
+                if self.__log is not None:
+                    self.__writeLog(3, "timeout MUTEX.")
+                else:
+                    print("WARNING: timeout MUTEX.")
                 return
 
         self.sl_tmx[0] = json.dumps([True, self.__availability, self.__server_availability])
@@ -234,7 +256,10 @@ class Client:
         self.__checkServerAvailability()
 
         if not self.__server_availability:# and self.__server_availability_ls:
-            print("INFO: Server unavailable, restarting shared memory space.")
+            if self.__log is not None:
+                self.__writeLog(0, "Server unavailable, restarting shared memory space.")
+            else:
+                print("INFO: Server unavailable, restarting shared memory space.")
             self.__server_availability_ls = False
             self.restart()
 
@@ -260,12 +285,19 @@ class Client:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
         if self.__type == list:
+            if self.__log is not None:
+                self.__writeLog(1, "Data shared type is list not dict.")
+            else:
+                print("INFO: Data shared type is list not dict.")
             raise TypeError("Data shared type is list not dict.")
 
         self.__checkServerAvailability()
 
         if not self.__server_availability:# and self.__server_availability_ls:
-            print("INFO: Server unavailable, restarting shared memory space.")
+            if self.__log is not None:
+                self.__writeLog(0, "Server unavailable, restarting shared memory space.")
+            else:
+                print("INFO: Server unavailable, restarting shared memory space.")
             self.__server_availability_ls = False
             self.restart()
 
@@ -273,7 +305,10 @@ class Client:
 
         while json.loads(self.sl_tmx[0])[0]:
             if (time.time() - start) > self.__timeout:
-                print("WARNING: timeout MUTEX.")
+                if self.__log is not None:
+                    self.__writeLog(3, "timeout MUTEX.")
+                else:
+                    print("WARNING: timeout MUTEX.")
                 return
 
         self.sl_tmx[0] = json.dumps([True, self.__availability, self.__server_availability])
@@ -306,7 +341,10 @@ class Client:
         self.__checkServerAvailability()
 
         if not self.__server_availability:# and self.__server_availability_ls:
-            print("INFO: Server unavailable, restarting shared memory space.")
+            if self.__log is not None:
+                self.__writeLog(0, "Server unavailable, restarting shared memory space.")
+            else:
+                print("INFO: Server unavailable, restarting shared memory space.")
             self.__server_availability_ls = False
             self.restart()
 
@@ -326,7 +364,10 @@ class Client:
         self.__checkServerAvailability()
 
         if not self.__server_availability:# and self.__server_availability_ls:
-            print("INFO: Server unavailable, restarting shared memory space.")
+            if self.__log is not None:
+                self.__writeLog(0, "Server unavailable, restarting shared memory space.")
+            else:
+                print("INFO: Server unavailable, restarting shared memory space.")
             self.__server_availability_ls = False
             self.restart()
 
@@ -343,7 +384,10 @@ class Client:
         self.__checkServerAvailability()
 
         if not self.__server_availability:# and self.__server_availability_ls:
-            print("INFO: Server unavailable, restarting shared memory space.")
+            if self.__log is not None:
+                self.__writeLog(0, "Server unavailable, restarting shared memory space.")
+            else:
+                print("INFO: Server unavailable, restarting shared memory space.")
             self.__server_availability_ls = False
             self.restart()
 
@@ -351,7 +395,10 @@ class Client:
 
         while json.loads(self.sl_tmx[0])[0]:
             if (time.time() - start) > self.__timeout:
-                print("WARNING: timeout MUTEX.")
+                if self.__log is not None:
+                    self.__writeLog(3, "timeout MUTEX.")
+                else:
+                    print("WARNING: timeout MUTEX.")
                 return
 
         self.sl_tmx[0] = json.dumps([True, self.__availability, self.__server_availability])
@@ -402,7 +449,10 @@ class Client:
         """Method that create shared memory space
         """
         if self.__state == "Started":
-            print("INFO: Client already started.")
+            if self.__log is not None:
+                self.__writeLog(0, "Client already started.")
+            else:
+                print("INFO: Client already started.")
             return
 
         self.__state = "Started"
@@ -424,7 +474,10 @@ class Client:
         """Method that calls stop and unlink method
         """
         if self.__state == "Stopped":
-            print("INFO: Client already stopped.")
+            if self.__log is not None:
+                self.__writeLog(0, "Client already stopped.")
+            else:
+                print("INFO: Client already stopped.")
             return
 
         self.__state = "Stopped"
@@ -433,6 +486,22 @@ class Client:
 
         self.close()
         self.unlink()
+
+    def __writeLog(self, log_id:int, message:str):
+        """Write information into a log file
+
+        Args:
+            log_id (int): log id
+            message (str): message to write into the log file
+        """
+        if log_id == 0:
+            logging.info(message)
+        elif log_id == 1:
+            logging.error(message)
+        elif log_id == 2:
+            logging.debug(message)
+        elif log_id == 3:
+            logging.warning(message)
 
     def __repr__(self):
         """Redefined method to print value of the Client Class instance

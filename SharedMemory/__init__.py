@@ -38,3 +38,4 @@ HISTORY:
 
 from .Client import Client
 from .Server import Server
+from .nClient import nClient

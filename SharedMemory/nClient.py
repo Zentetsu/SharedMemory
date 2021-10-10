@@ -1,5 +1,5 @@
-from SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined
-from SharedMemory import SharedMemory
+from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined
+from .SharedMemory import SharedMemory
 import posix_ipc
 import json
 import mmap
@@ -25,10 +25,15 @@ class nClient(SharedMemory):
         self.__availability = False
  
         self.__initSharedMemory()
-
+ 
     def close(self):
-        self.__mapfile.close()
-        posix_ipc.unlink_shared_memory(self.__name)
+        if self.__mapfile is not None:
+            self.__mapfile.close()
+            self.__mapfile = None
+        
+        if self.__memory is not None:
+            posix_ipc.unlink_shared_memory(self.__name)
+            self.__memory = None
     
     def __initSharedMemory(self):
         if type(self.__value) is list and type in [type(e) for e in self.__value]:
@@ -47,9 +52,9 @@ class nClient(SharedMemory):
             if not self.__exist:
                 print("TODO")
                 exit(1)
-
+ 
             self.__memory = posix_ipc.SharedMemory(self.__name)
-
+ 
         self.__mapfile = mmap.mmap(self.__memory.fd, self.__size)
         # self.__semaphore.release()      
  
@@ -66,11 +71,14 @@ class nClient(SharedMemory):
             raise SMTypeError(value)
  
         return value
-
+ 
     def __repr__(self):
         s = "Client: " + str(self.__name) + "\n"\
             + "\tStatus: " + str(self.__state) + "\n"\
             + "\tAvailable: " + self.__availability.__repr__() + "\n"\
             + "\tValue: " + self.__value.__repr__()
-
+ 
         return s
+ 
+    def __del__(self):
+        self.close()

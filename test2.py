@@ -84,20 +84,112 @@ def bin_to_fp(value, nb_bits):
         return 0
     return nv
 
-def test(value):
+def test(value, nb_bits):
+    print("--get sign")
+    sign = '0'
+    if value < 0:
+        sign = '1'
+    print(sign)
     frac, whole = math.modf(round(abs(value), 5))
-    b_whole = bin(math.trunc(whole))
-    b_frac = bin(int(str(frac)[2:]))
-    exp = (2**(3-1)-1) + 2**0
-    binary = b_whole[2:] + '.' + b_frac[2:]
+    print("--get whole bin")
+    b_whole = bin(math.trunc(whole))[2:]
+    print(b_whole)
+    
+    print("--get frac bin")
+    b_frac = frac
+    if b_frac == 0:
+        b_frac = '0'
+    else:
+        nb = 0
+        while b_frac != 0 and nb < 10:
+            f = frac*2
+            print(frac, f)
+            frac, whole = math.modf(round(f), 5)
+            nb = nb + 1    
+    print(b_frac)
 
-    print(bin(exp))
+    print("--get append bin part")
+    append_bin_part = b_whole + '.' + b_frac
+    print(append_bin_part)
 
-value =  1
+    print("--get normalize")
+    norm = 0
+    if append_bin_part[0] == '1':
+        norm = len(b_whole) - 1
+        normalize = b_whole[0] + '.' + b_whole[1:] + b_frac
+        print(normalize)
+        # normalize = 
+
+        pass
+    print(normalize)
+
+    print("--get mantissa")
+    mantissa = normalize[2:]
+    print(mantissa)
+
+    print("--get exponent")
+    exp = bin(norm + math.trunc(2**((nb_bits/2-1)-1)-1))[2:]
+    print(exp)
+    
+    print("--get result")
+    result = '0b' + sign + '0' * math.trunc((nb_bits/2-1) - len(exp)) + exp + mantissa + '0' * math.trunc(nb_bits/2 -  len(mantissa))
+    print(result)
+
+    return result
+
+def tset(value, nb_bits):
+    binary = value[2:]
+    print("--get separate")
+    sign = binary[0]
+
+    print("--get mantissa")
+    mantissa = "1." + binary[math.trunc(nb_bits/2-1)+1:]
+    print(mantissa)
+
+    print("--get exponent")
+    exp = binary[1:math.trunc(nb_bits/2-1)+1]
+    exp = int(exp, 2) - math.trunc(2**((nb_bits/2-1)-1)-1)
+    print(exp)
+
+    print("--get denormalize")
+    denormalize = mantissa
+    if exp > 0:
+        denormalize = mantissa[0] + mantissa[2:]
+        denormalize = denormalize[0:1+exp] + '.' + denormalize[1+exp:]
+        pass
+    print(denormalize)
+
+    print("--get convert")
+    convert = 0
+    for d in denormalize:
+        if d != '.':
+            convert = convert + int(d) * 2**exp
+            exp = exp - 1
+    print(convert)
+
+    print("--get sign")
+    if sign == 1:
+        sign = -1
+    else:
+        sign = 1
+    print(sign)
+
+    print("--get result")
+    result = sign * convert
+    print(result)
+
+    return result
+
+value =  1.5
 nb_bits = 8
 
-test(value)
+# for value in range(1, 20):
+res1 = test(value, nb_bits)
+print("----------------")
+res2 = tset(res1, nb_bits)
 
+    # if res2 != value:
+        # exit(1)
 # i = 2
 
 

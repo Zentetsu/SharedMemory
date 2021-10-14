@@ -31,11 +31,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
-2021-10-13	Zen Preparing new Shared Memory version
+2021-10-13  Zen Preparing new Shared Memory version
 '''
 
 from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined
 import posix_ipc
+import struct
 import json
 import mmap
 import sys
@@ -45,8 +46,8 @@ _SHM_NAME_PREFIX = '/psm_'
 _MODE = 0o600
 _FLAG = posix_ipc.O_CREX
 
-_BEGIN = 0xF0
-_END = 0x0F
+_BEGIN = 0xAA
+_END = 0xBB
 
 _INT = 0x0
 _FLOAT = 0x1
@@ -57,7 +58,7 @@ _DICT = 0x5
 _NPARRAY = 0x6
 
 class SharedMemory:
-    def __init__(self, name:str, value=None, size:int=10, exist=False):
+    def __init__(self, name:str, value=None, size:int=8, exist=False):
         if value is None:
             raise SMMultiInputError
 
@@ -103,28 +104,20 @@ class SharedMemory:
 
         self.__mapfile = mmap.mmap(self.__memory.fd, self.__size)
 
-    def __checkValue(self, value):
-        if value is str:
-            value = " " * self.__size
-        elif value is int:
-            value = 0
-        elif value is float:
-            value = 0.0
-        elif value is bool:
-            value = False
-        elif value is dict or value is list:
-            raise SMTypeError(value)
+    # def __checkValue(self, value):
+    #     if value is str:
+    #         value = " " * self.__size
+    #     elif value is int:
+    #         value = 0
+    #     elif value is float:
+    #         value = 0.0
+    #     elif value is bool:
+    #         value = False
+    #     elif value is dict or value is list:
+    #         raise SMTypeError(value)
 
-        return
+    #     return
         # self.__semaphore.release()
-
-    def __repr__(self):
-        s = "Client: " + str(self.__name) + "\n"\
-            + "\tStatus: " + str(self.__state) + "\n"\
-            + "\tAvailable: " + self.__availability.__repr__() + "\n"\
-            + "\tValue: " + self.__value.__repr__()
-
-        return s
 
     # def __del__(self):
     #     self.close()
@@ -133,38 +126,96 @@ class SharedMemory:
         pass
 
     def setValue(self, value):
+        if not self.__checkValue(type(value)):
+            print("TODO")
+            return 0
+
+        __data = self.__prepareData(value)
+
         self.__mapfile.seek(0)
-        self.__mapfile.write_byte(0xF0)
 
-        if type(value) is int:
-            self.__mapfile.write_byte(0x02)
-            self.__mapfile.write_byte(_INT)
-            self.__mapfile.write_byte(value)
-
-        self.__mapfile.write_byte(0x0F)
+        for d in __data:
+            self.__mapfile.write_byte(d)
 
     def getValue(self):
+        encoded_data = []
         self.__mapfile.seek(0)
-        __begin = self.__mapfile.read_byte()
 
-        if __begin != _BEGIN:
+        encoded_data.append(self.__mapfile.read_byte())
+        if encoded_data[0] != _BEGIN:
+            print("B TODO")
             return 0
 
-        __size = self.__mapfile.read_byte()
+        encoded_data.append(self.__mapfile.read_byte())
+        encoded_data.append(self.__mapfile.read_byte())
 
-        data = __begin << 8 | __size
-        __current_data = __begin
-        for _ in range(0, __size):
-            __current_data = self.__mapfile.read_byte()
-            data = data << 8 | __current_data
+        for _ in range(0, encoded_data[2]):
+            encoded_data.append(self.__mapfile.read_byte())
 
-        __end = self.__mapfile.read_byte()
-        if __end != _END:
+        encoded_data.append(self.__mapfile.read_byte())
+        if encoded_data[len(encoded_data)-1] != _END:
+            print("E TODO")
             return 0
 
-        data = data << 8 | __end
+        decoded_data = self.__decoding(encoded_data[1:len(encoded_data)-1])
+
+        return 0
+
+    def __checkValue(self, v_type: type):
+        if v_type != self.__type:
+            return False
+
+        return True
+
+    def __prepareData(self, value):
+        data = [_BEGIN]
+        if type(value) == int:
+            data.insert(1, _INT)
+
+            h = 0xFF & value
+            data.insert(2, h)
+            while h != 0:
+                print(h)
+                h = 0xFF & (h >> 8)
+                data.insert(2, h)
+
+            data.insert(2, len(data)-2)
+
+        data.insert(len(data), _END)
+
+        print([hex(i) for i in data])
 
         return data
+
+    def __decoding(self, e_data):
+
+        print([hex(i) for i in e_data])
+
+        if e_data[0] == _INT:
+            d_data = e_data[2:e_data[1]+2]
+
+            print([hex(i) for i in d_data])
+            value = d_data[0]
+            for i in range(1, len(d_data)):
+                value = value << 8 | d_data[i]
+
+            print(value)
+
+        return value
+
+    # def __checkSize(self, value):
+    #     if self.__type == int:
+    #         pass
+
+    #     return True
+
+    def __repr__(self):
+        s = "Client: " + str(self.__name) + "\n"\
+            + "\tStatus: " + str(self.__state) + "\n"\
+            + "\tAvailable: " + self.__availability.__repr__() + "\n"\
+            + "\tValue: " + self.__value.__repr__()
+
+        return s
 
     def getType(self):
         pass

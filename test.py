@@ -7,7 +7,7 @@ import sys
 if __name__ == '__main__':
     c = SharedMemory(name="test", value=10, exist=True)
     # c = SharedMemory(name="test", value=10, exist=True)
-    c.setValue(255)
+    c.setValue(511)
     print(hex(c.getValue()))
 
     c.close()

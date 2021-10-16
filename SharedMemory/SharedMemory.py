@@ -34,6 +34,8 @@ HISTORY:
 2021-10-13  Zen Preparing new Shared Memory version
 '''
 
+from ctypes import c_byte
+from datetime import date
 from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined
 import posix_ipc
 import struct
@@ -55,7 +57,8 @@ _COMPLEX = 0x2
 _STR = 0x3
 _LIST = 0x4
 _DICT = 0x5
-_NPARRAY = 0x6
+_TUPLE = 0x6
+_NPARRAY = 0x7
 
 class SharedMemory:
     def __init__(self, name:str, value=None, size:int=8, exist=False):
@@ -130,7 +133,7 @@ class SharedMemory:
             print("TODO")
             return 0
 
-        __data = self.__prepareData(value)
+        __data = self.__encoding(value)
 
         self.__mapfile.seek(0)
 
@@ -159,49 +162,144 @@ class SharedMemory:
 
         decoded_data = self.__decoding(encoded_data[1:len(encoded_data)-1])
 
-        return 0
+        return decoded_data
 
     def __checkValue(self, v_type: type):
+        print(v_type, self.__type)
         if v_type != self.__type:
             return False
 
         return True
 
-    def __prepareData(self, value):
+    def __encoding(self, value):
         data = [_BEGIN]
-        if type(value) == int:
-            data.insert(1, _INT)
 
-            h = 0xFF & value
-            data.insert(2, h)
-            while h != 0:
-                print(h)
-                h = 0xFF & (h >> 8)
-                data.insert(2, h)
+        if type(value) == int or type(value) == float:
+            if type(value) == float:
+                value = int("0b" + self.float2bin(value), 2)
+                data.append(_FLOAT)
+            else:
+                data.append(_INT)
 
-            data.insert(2, len(data)-2)
+            data.append(8)
+            data.append((0xFF00000000000000 & value) >> 56)
+            data.append((0xFF000000000000 & value) >> 48)
+            data.append((0xFF0000000000 & value) >> 40)
+            data.append((0xFF00000000 & value) >> 32)
+            data.append((0xFF000000 & value) >> 24)
+            data.append((0xFF0000 & value) >> 16)
+            data.append((0xFF00 & value) >> 8)
+            data.append((0xFF & value) >> 0)
+        elif type(value) == str:
+            data.append(_STR)
+            data.append(9)
 
-        data.insert(len(data), _END)
+            str_encoded = int(value.encode('utf-8').hex(), 16)
+            data.append((0xFF0000000000000000 & str_encoded) >> 64)
+            data.append((0xFF00000000000000 & str_encoded) >> 56)
+            data.append((0xFF000000000000 & str_encoded) >> 48)
+            data.append((0xFF0000000000 & str_encoded) >> 40)
+            data.append((0xFF00000000 & str_encoded) >> 32)
+            data.append((0xFF000000 & str_encoded) >> 24)
+            data.append((0xFF0000 & str_encoded) >> 16)
+            data.append((0xFF00 & str_encoded) >> 8)
+            data.append((0xFF & str_encoded) >> 0)
+        elif type(value) == list or type(value) == tuple:
+            if type(value) == list:
+                data.append(_LIST)
+            else:
+                data.append(_TUPLE)
+
+            data.append(0)
+
+            for i in value:
+                data.extend(self.__encoding(i)[1:-1])
+
+            data[2] = len(data) - 3
+        elif type(value) == dict:
+            data.append(_DICT)
+            data.append(0)
+
+            for k in value:
+                data.extend(self.__encoding(k)[1:-1])
+                data.extend(self.__encoding(value[k])[1:-1])
+                print(k)
+                print(value[k])
+
+            data[2] = len(data) - 3
+
+        data.append(_END)
 
         print([hex(i) for i in data])
+        print(len(data))
 
         return data
 
     def __decoding(self, e_data):
 
-        print([hex(i) for i in e_data])
+        # print([hex(i) for i in e_data])
+        d_data = 0
 
-        if e_data[0] == _INT:
-            d_data = e_data[2:e_data[1]+2]
+        if e_data[0] == _INT or e_data[0] == _FLOAT:
+            d_data = (e_data[2] << 56) + \
+                     (e_data[3] << 48) + \
+                     (e_data[4] << 40) + \
+                     (e_data[5] << 32) + \
+                     (e_data[6] << 24) + \
+                     (e_data[7] << 16) + \
+                     (e_data[8] << 8) + \
+                     (e_data[9] << 0)
 
-            print([hex(i) for i in d_data])
-            value = d_data[0]
-            for i in range(1, len(d_data)):
-                value = value << 8 | d_data[i]
+            if e_data[0] == _FLOAT:
+                d_data = self.bin2float(bin(d_data))
+        elif e_data[0] == _STR:
+            d_data = (e_data[2] << 64) + \
+                     (e_data[3] << 56) + \
+                     (e_data[4] << 48) + \
+                     (e_data[5] << 40) + \
+                     (e_data[6] << 32) + \
+                     (e_data[7] << 24) + \
+                     (e_data[8] << 16) + \
+                     (e_data[9] << 8) + \
+                     (e_data[10] << 0)
 
-            print(value)
+            d_data = bytearray.fromhex(hex(d_data)[2:]).decode()
+        elif e_data[0] == _LIST or e_data[0] == _TUPLE:
+            e_data = e_data[2:]
+            d_data = []
+            c_type = e_data[0]
 
-        return value
+            while len(e_data) != 0:
+                new_data = e_data[:2+e_data[1]]
+                e_data = e_data[2+e_data[1]:]
+
+                d_data.append(self.__decoding(new_data))
+
+            if c_type == _TUPLE:
+                d_data = tuple(d_data)
+
+        elif e_data[0] == _DICT:
+            e_data = e_data[2:]
+            d_data = {}
+
+            while len(e_data) != 0:
+                new_key = e_data[:2+e_data[1]]
+                e_data = e_data[2+e_data[1]:]
+                new_data = e_data[:2+e_data[1]]
+                e_data = e_data[2+e_data[1]:]
+
+                d_data[self.__decoding(new_key)] = self.__decoding(new_data)
+
+        return d_data
+
+    def bin2float(self, b):
+        h = int(b, 2).to_bytes(8, byteorder="big")
+        return struct.unpack('>d', h)[0]
+
+
+    def float2bin(self, f):
+        [d] = struct.unpack(">Q", struct.pack(">d", f))
+        return f'{d:064b}'
 
     # def __checkSize(self, value):
     #     if self.__type == int:

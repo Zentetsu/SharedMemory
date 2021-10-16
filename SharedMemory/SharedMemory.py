@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 HISTORY:
 2021-10-13  Zen Preparing new Shared Memory version
+2021-10-17  Zen Encoding data and adding basic methods
 '''
 
 from ctypes import c_byte
@@ -76,6 +77,9 @@ class SharedMemory:
 
         self.__initSharedMemory()
 
+    def restart(self):
+        self.__initSharedMemory()
+
     def close(self):
         if self.__mapfile is not None:
             self.__mapfile.close()
@@ -84,6 +88,67 @@ class SharedMemory:
         if self.__memory is not None:
             posix_ipc.unlink_shared_memory(self.__name)
             self.__memory = None
+
+        self.__availability = False
+        self.__state = "Stopped"
+
+    def exportToJSON(self):
+        pass
+
+    def setValue(self, value):
+        if not self.__availability:
+            print("TODO: not available")
+            return None
+
+        if not self.__checkValue(type(value)):
+            print("TODO")
+            return 0
+
+        __data = self.__encoding(value)
+
+        self.__mapfile.seek(0)
+
+        for d in __data:
+            self.__mapfile.write_byte(d)
+
+    def getValue(self):
+        if not self.__availability:
+            print("TODO: not available")
+            return None
+
+        encoded_data = []
+        self.__mapfile.seek(0)
+
+        encoded_data.append(self.__mapfile.read_byte())
+        if encoded_data[0] != _BEGIN:
+            print("B TODO")
+            return 0
+
+        encoded_data.append(self.__mapfile.read_byte())
+        encoded_data.append(self.__mapfile.read_byte())
+
+        for _ in range(0, encoded_data[2]):
+            encoded_data.append(self.__mapfile.read_byte())
+
+        encoded_data.append(self.__mapfile.read_byte())
+        if encoded_data[len(encoded_data)-1] != _END:
+            print("E TODO")
+            return 0
+
+        decoded_data = self.__decoding(encoded_data[1:len(encoded_data)-1])
+
+        self.__value == decoded_data
+
+        return decoded_data
+
+    def getType(self):
+        return self.__type
+
+    def getStatus(self):
+        return self.__state
+
+    def getAvailability(self):
+        return self.__availability
 
     def __initSharedMemory(self):
         if type(self.__value) is list and type in [type(e) for e in self.__value]:
@@ -106,66 +171,12 @@ class SharedMemory:
             self.__memory = posix_ipc.SharedMemory(self.__name)
 
         self.__mapfile = mmap.mmap(self.__memory.fd, self.__size)
+        self.__availability = True
+        self.__state = "Running"
 
-    # def __checkValue(self, value):
-    #     if value is str:
-    #         value = " " * self.__size
-    #     elif value is int:
-    #         value = 0
-    #     elif value is float:
-    #         value = 0.0
-    #     elif value is bool:
-    #         value = False
-    #     elif value is dict or value is list:
-    #         raise SMTypeError(value)
-
-    #     return
-        # self.__semaphore.release()
-
-    # def __del__(self):
-    #     self.close()
-
-    def exportToJSON(self):
-        pass
-
-    def setValue(self, value):
-        if not self.__checkValue(type(value)):
-            print("TODO")
-            return 0
-
-        __data = self.__encoding(value)
-
-        self.__mapfile.seek(0)
-
-        for d in __data:
-            self.__mapfile.write_byte(d)
-
-    def getValue(self):
-        encoded_data = []
-        self.__mapfile.seek(0)
-
-        encoded_data.append(self.__mapfile.read_byte())
-        if encoded_data[0] != _BEGIN:
-            print("B TODO")
-            return 0
-
-        encoded_data.append(self.__mapfile.read_byte())
-        encoded_data.append(self.__mapfile.read_byte())
-
-        for _ in range(0, encoded_data[2]):
-            encoded_data.append(self.__mapfile.read_byte())
-
-        encoded_data.append(self.__mapfile.read_byte())
-        if encoded_data[len(encoded_data)-1] != _END:
-            print("E TODO")
-            return 0
-
-        decoded_data = self.__decoding(encoded_data[1:len(encoded_data)-1])
-
-        return decoded_data
+        self.setValue(self.__value)
 
     def __checkValue(self, v_type: type):
-        print(v_type, self.__type)
         if v_type != self.__type:
             return False
 
@@ -176,7 +187,7 @@ class SharedMemory:
 
         if type(value) == int or type(value) == float:
             if type(value) == float:
-                value = int("0b" + self.float2bin(value), 2)
+                value = int("0b" + self.__convertFlaot2Bin(value), 2)
                 data.append(_FLOAT)
             else:
                 data.append(_INT)
@@ -190,6 +201,7 @@ class SharedMemory:
             data.append((0xFF0000 & value) >> 16)
             data.append((0xFF00 & value) >> 8)
             data.append((0xFF & value) >> 0)
+
         elif type(value) == str:
             data.append(_STR)
             data.append(9)
@@ -204,6 +216,7 @@ class SharedMemory:
             data.append((0xFF0000 & str_encoded) >> 16)
             data.append((0xFF00 & str_encoded) >> 8)
             data.append((0xFF & str_encoded) >> 0)
+
         elif type(value) == list or type(value) == tuple:
             if type(value) == list:
                 data.append(_LIST)
@@ -216,6 +229,7 @@ class SharedMemory:
                 data.extend(self.__encoding(i)[1:-1])
 
             data[2] = len(data) - 3
+
         elif type(value) == dict:
             data.append(_DICT)
             data.append(0)
@@ -223,21 +237,14 @@ class SharedMemory:
             for k in value:
                 data.extend(self.__encoding(k)[1:-1])
                 data.extend(self.__encoding(value[k])[1:-1])
-                print(k)
-                print(value[k])
 
             data[2] = len(data) - 3
 
         data.append(_END)
 
-        print([hex(i) for i in data])
-        print(len(data))
-
         return data
 
     def __decoding(self, e_data):
-
-        # print([hex(i) for i in e_data])
         d_data = 0
 
         if e_data[0] == _INT or e_data[0] == _FLOAT:
@@ -251,7 +258,8 @@ class SharedMemory:
                      (e_data[9] << 0)
 
             if e_data[0] == _FLOAT:
-                d_data = self.bin2float(bin(d_data))
+                d_data = self.__convertBin2Flaot(bin(d_data))
+
         elif e_data[0] == _STR:
             d_data = (e_data[2] << 64) + \
                      (e_data[3] << 56) + \
@@ -262,8 +270,8 @@ class SharedMemory:
                      (e_data[8] << 16) + \
                      (e_data[9] << 8) + \
                      (e_data[10] << 0)
-
             d_data = bytearray.fromhex(hex(d_data)[2:]).decode()
+
         elif e_data[0] == _LIST or e_data[0] == _TUPLE:
             e_data = e_data[2:]
             d_data = []
@@ -272,7 +280,6 @@ class SharedMemory:
             while len(e_data) != 0:
                 new_data = e_data[:2+e_data[1]]
                 e_data = e_data[2+e_data[1]:]
-
                 d_data.append(self.__decoding(new_data))
 
             if c_type == _TUPLE:
@@ -287,25 +294,94 @@ class SharedMemory:
                 e_data = e_data[2+e_data[1]:]
                 new_data = e_data[:2+e_data[1]]
                 e_data = e_data[2+e_data[1]:]
-
                 d_data[self.__decoding(new_key)] = self.__decoding(new_data)
 
         return d_data
 
-    def bin2float(self, b):
+    def __convertBin2Flaot(self, b):
         h = int(b, 2).to_bytes(8, byteorder="big")
         return struct.unpack('>d', h)[0]
 
-
-    def float2bin(self, f):
+    def __convertFlaot2Bin(self, f):
         [d] = struct.unpack(">Q", struct.pack(">d", f))
         return f'{d:064b}'
 
-    # def __checkSize(self, value):
-    #     if self.__type == int:
-    #         pass
+    def __getitem__(self, key):
+        if not self.__availability:
+            print("TODO: not available")
+            return None
 
-    #     return True
+        self.__value = self.getValue()
+
+        if self.__type == dict:
+            if type(key) is int:
+                key = str(key)
+            return self.__value[key]
+        elif self.__type == list:
+            return self.__value[key]
+        else:
+            return self.__value
+
+    def __setitem__(self, key, value):
+        if not self.__availability:
+            print("TODO: not available")
+            return None
+
+        if self.__type == list:
+            if self.__log is not None:
+                print("TODO: log")
+                # self.__writeLog(1, "Data shared type is list not dict.")
+            else:
+                print("INFO: Data shared type is list not dict.")
+            raise TypeError("Data shared type is list not dict.")
+
+        self.__value = self.getValue()
+
+        if type(key) is int:
+            key = str(key)
+
+        if self.__type == dict:
+            if type(key) is int:
+                key = str(key)
+            self.__value[key] = value
+        elif self.__type == list:
+            self.__value[key] = value
+        else:
+            self.__value = value
+
+        if sys.getsizeof(self.__value) > self.__size:
+            raise SMSizeError
+
+        self.setValue(self.__value)
+
+    def __len__(self):
+        if not self.__availability:
+            print("TODO: not available")
+            return None
+
+        self.__value = self.getValue()
+
+        return self.__value.__len__()
+
+    def __contains__(self, key):
+        if not self.__availability:
+            print("TODO: not available")
+            return None
+
+        self.__value = self.getValue()
+
+        return self.__value.__contains__(key)
+
+    def __delitem__(self, key):
+        if not self.__availability:
+            print("TODO: not available")
+            return None
+
+        self.__value = self.getValue()
+
+        self.__value.__delitem__(key)
+
+        self.setValue(self.__value)
 
     def __repr__(self):
         s = "Client: " + str(self.__name) + "\n"\
@@ -315,50 +391,8 @@ class SharedMemory:
 
         return s
 
-    def getType(self):
-        pass
-
-    def updateValue(self):
-        pass
-
-    def getStatus(self):
-        pass
-
-    def getAvailability(self):
-        pass
-
-    def unlink(self):
-        pass
-
-    def start(self):
-        pass
-
-    def restart(self):
-        pass
-
-    def stop(self):
-        pass
-
     def __initValueByJSON(self):
         pass
 
-    def __checkServerAvailability(self):
-        pass
-
     def __writeLog(self):
-        pass
-
-    def __getitem__(self):
-        pass
-
-    def __setitem__(self):
-        pass
-
-    def __len__(self):
-        pass
-
-    def __contains__(self):
-        pass
-
-    def __delitem__(self):
         pass

@@ -19,3 +19,6 @@ if __name__ == '__main__':
     c["A"] = 10
     print(c.getValue())
     print(c)
+    d = SharedMemory(name="test", path="./tests/test.json", exist=True)
+    print(d)
+    d.exportToJSON("./tesst.json")

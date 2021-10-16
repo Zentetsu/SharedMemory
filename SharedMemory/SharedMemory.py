@@ -32,7 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 HISTORY:
 2021-10-13  Zen Preparing new Shared Memory version
-2021-10-17  Zen Encoding data and adding basic methods
+2021-10-17  Zen Encoding data and adding basic methods + export and import JSON file
 '''
 
 from ctypes import c_byte
@@ -62,15 +62,19 @@ _TUPLE = 0x6
 _NPARRAY = 0x7
 
 class SharedMemory:
-    def __init__(self, name:str, value=None, size:int=8, exist=False):
-        if value is None:
+    def __init__(self, name:str, value=None, path:str=None, size:int=8, exist=False):
+        if value is None and path is None or value is not None and path is not None:
             raise SMMultiInputError
+        elif value is None:
+            self.__value = self.__initValueByJSON(path)
+        else:
+            self.__value = value
+            self.__size = size
 
         self.__name = _SHM_NAME_PREFIX + name
-        self.__value = value
-        self.__size = size
         self.__exist = exist
-        self.__type = type(value)
+        self.__type = type(self.__value)
+        self.__log = None
 
         self.__state = "Stopped"
         self.__availability = False
@@ -91,9 +95,6 @@ class SharedMemory:
 
         self.__availability = False
         self.__state = "Stopped"
-
-    def exportToJSON(self):
-        pass
 
     def setValue(self, value):
         if not self.__availability:
@@ -149,6 +150,19 @@ class SharedMemory:
 
     def getAvailability(self):
         return self.__availability
+
+    def exportToJSON(self, path):
+        if self.__type is not dict:
+            if self.__log is not None:
+                print("TODO: log")
+                # self.__writeLog(1, "Data type must be dict")
+            else:
+                print("INFO: Data type must be dict")
+            raise TypeError("Data type must be dict")
+
+        file = open(path, 'w+')
+        json.dump(self.getValue(), file)
+        file.close()
 
     def __initSharedMemory(self):
         if type(self.__value) is list and type in [type(e) for e in self.__value]:
@@ -306,6 +320,13 @@ class SharedMemory:
         [d] = struct.unpack(">Q", struct.pack(">d", f))
         return f'{d:064b}'
 
+    def __initValueByJSON(self, path):
+        json_file = open(path)
+        value = json.load(json_file)
+        json_file.close()
+
+        return value
+
     def __getitem__(self, key):
         if not self.__availability:
             print("TODO: not available")
@@ -390,9 +411,6 @@ class SharedMemory:
             + "\tValue: " + self.__value.__repr__()
 
         return s
-
-    def __initValueByJSON(self):
-        pass
 
     def __writeLog(self):
         pass

@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Fri Jul 03 2020
+Last Modified: Tue Oct 19 2021
 Modified By: Zentetsu
 
 ----
@@ -33,9 +33,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 HISTORY:
 2020-07-03	Zen	Adding import for Server
 2020-07-01	Zen	Creating file
+2021-10-19	Zen	Removing import
 '''
 
 
-# from .Client import Client
-# from .Server import Server
-from .nClient import nClient
+from .SharedMemory import SharedMemory

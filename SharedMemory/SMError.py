@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Sep 17 2020
+Last Modified: Tue Oct 19 2021
 Modified By: Zentetsu
 
 ----
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----
 
 HISTORY:
+2021-10-19	Zen	Adding error
 2020-07-13	Zen	Adding comments
 2020-07-03	Zen	Adding new exception
 2020-07-02	Zen	Creating file
@@ -94,6 +95,26 @@ class SMNotDefined(Exception):
         """
         if message is None:
             self.message = "shared memory called '" + name + "' is not defined."
+        else:
+            self.message = message
+
+        super().__init__(self.message)
+
+class SMAlreadyExist(Exception):
+    """Class focused on catching an attempt to create an intialized shared memory
+
+    Args:
+        Exception (Exception):
+    """
+    def __init__(self, name, message=None):
+        """Class constructor
+
+        Args:
+            name (str): shared memory name
+            message (str, optional): message. Defaults to None.
+        """
+        if message is None:
+            self.message = "shared memory called '" + name + "' already exist."
         else:
             self.message = message
 

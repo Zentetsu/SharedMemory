@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Wed Oct 13 2021
+Last Modified: Tue Oct 19 2021
 Modified By: Zentetsu
 
 ----
@@ -33,12 +33,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 HISTORY:
 2021-10-13  Zen Preparing new Shared Memory version
 2021-10-17  Zen Encoding data and adding basic methods + export and import JSON file
+2021-10-19	Zen	Adding comment and logging
 '''
 
-from ctypes import c_byte
-from datetime import date
-from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined
+from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, SMAlreadyExist
 import posix_ipc
+import logging
 import struct
 import json
 import mmap
@@ -54,27 +54,46 @@ _END = 0xBB
 
 _INT = 0x0
 _FLOAT = 0x1
-_COMPLEX = 0x2
-_STR = 0x3
-_LIST = 0x4
-_DICT = 0x5
-_TUPLE = 0x6
-_NPARRAY = 0x7
+_BOOL = 0x2
+_COMPLEX = 0x3
+_STR = 0x4
+_LIST = 0x5
+_DICT = 0x6
+_TUPLE = 0x7
+_NPARRAY = 0x8
 
 class SharedMemory:
-    def __init__(self, name:str, value=None, path:str=None, size:int=8, exist=False):
-        if value is None and path is None or value is not None and path is not None:
+    """Shared Memory class
+    """
+    def __init__(self, name:str, value=None, path:str=None, size:int=8, exist:bool=False, log:str=None):
+        """Class constructor
+
+        Args:
+            name (str): desired name for the sharing space
+            value ([type], optional): value to share with the other Server. Defaults to None.
+            path (str, optional): path to load JSON file and sharing data inside. Defaults to None.
+            size (int, optional): size of the shared space or str value. Defaults to 10.
+            exist (bool, optional): will authorize to access to an existing shared memory space
+            timeout (int, optional): mutex timeout. Defaults to 1.
+
+        Raises:
+            SMMultiInputError: raise an error when value and path are both at None or initialized
+        """
+        self.__log = log
+
+        if value is None and path is None and not exist or value is not None and path is not None:
+            if self.__log is not None:
+                self.__writeLog(1, "Conflict between value and json path intialization.")
             raise SMMultiInputError
-        elif value is None:
+        elif value is None and path is not None:
             self.__value = self.__initValueByJSON(path)
         else:
             self.__value = value
             self.__size = size
 
         self.__name = _SHM_NAME_PREFIX + name
-        self.__exist = exist
         self.__type = type(self.__value)
-        self.__log = None
+        self.__exist = exist
 
         self.__state = "Stopped"
         self.__availability = False
@@ -82,28 +101,57 @@ class SharedMemory:
         self.__initSharedMemory()
 
     def restart(self):
+        """Method to restart the shared memory space
+        """
+        if self.__state == "Running":
+            if self.__log is not None:
+                self.__writeLog(0, "Client already running.")
+            else:
+                print("INFO: Client already running.")
+            return
+
         self.__initSharedMemory()
 
     def close(self):
+        """Method to close the shared space
+        """
+        if self.__state == "Stopped":
+            if self.__log is not None:
+                self.__writeLog(0, "Client already stopped.")
+            else:
+                print("INFO: Client already stopped.")
+            return
+
         if self.__mapfile is not None:
             self.__mapfile.close()
             self.__mapfile = None
 
         if self.__memory is not None:
-            posix_ipc.unlink_shared_memory(self.__name)
+            try:
+                posix_ipc.unlink_shared_memory(self.__name)
+            except:
+                if self.__log:
+                    self.__writeLog(0, "SharedMemory already closed.")
             self.__memory = None
 
         self.__availability = False
         self.__state = "Stopped"
 
     def setValue(self, value):
+        """Method to set the shared value
+
+        Args:
+            value ([type]): data to add to the shared memory
+        """
         if not self.__availability:
-            print("TODO: not available")
+            if self.__log is not None:
+                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+            else:
+                print("ERROR: Shared Moemory space doesn't exist.")
             return None
 
         if not self.__checkValue(type(value)):
-            print("TODO")
-            return 0
+            raise SMTypeError()
 
         __data = self.__encoding(value)
 
@@ -113,8 +161,16 @@ class SharedMemory:
             self.__mapfile.write_byte(d)
 
     def getValue(self):
+        """Method to return the shared value
+
+        Returns:
+            [type]: return data from the shared space
+        """
         if not self.__availability:
-            print("TODO: not available")
+            if self.__log is not None:
+                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+            else:
+                print("ERROR: Shared Moemory space doesn't exist.")
             return None
 
         encoded_data = []
@@ -143,28 +199,47 @@ class SharedMemory:
         return decoded_data
 
     def getType(self):
+        """Method that returns data type
+
+        Returns:
+            [type]: data type
+        """
         return self.__type
 
-    def getStatus(self):
+    def getStatus(self) -> str:
+        """Method that return shared memory state
+
+        Returns:
+            str: shared memory state
+        """
         return self.__state
 
-    def getAvailability(self):
+    def getAvailability(self) -> bool:
+        """Method that return the availability of Shared Memory
+
+        Returns:
+            bool: Shared Memory availability status
+        """
         return self.__availability
 
-    def exportToJSON(self, path):
+    def exportToJSON(self, path:str):
+        """Method to export dict to JSON file
+
+        Args:
+            path (str): file path
+        """
         if self.__type is not dict:
             if self.__log is not None:
-                print("TODO: log")
-                # self.__writeLog(1, "Data type must be dict")
-            else:
-                print("INFO: Data type must be dict")
-            raise TypeError("Data type must be dict")
+                self.__writeLog(1, "Data type must be dict.")
+            raise TypeError("Data type must be dict.")
 
         file = open(path, 'w+')
         json.dump(self.getValue(), file)
         file.close()
 
     def __initSharedMemory(self):
+        """Method to initialize the shared space
+        """
         if type(self.__value) is list and type in [type(e) for e in self.__value]:
             for i in range(0, len(self.__value)):
                 self.__value[i] = self.__checkValue(self.__value[i])
@@ -176,11 +251,13 @@ class SharedMemory:
         try:
             self.__memory = posix_ipc.SharedMemory(self.__name, _FLAG, _MODE)
             os.ftruncate(self.__memory.fd, self.__size)
-            # self.__semaphore = posix_ipc.Semaphore(self.__name, posix_ipc.O_CREX)
+
+            if self.__exist:
+                self.close()
+                raise SMNotDefined(self.__name)
         except posix_ipc.ExistentialError:
             if not self.__exist:
-                print("TODO")
-                exit(1)
+                raise SMAlreadyExist(self.__name)
 
             self.__memory = posix_ipc.SharedMemory(self.__name)
 
@@ -188,20 +265,40 @@ class SharedMemory:
         self.__availability = True
         self.__state = "Running"
 
-        self.setValue(self.__value)
+        if not self.__exist:
+            self.setValue(self.__value)
+        else:
+            self.__value = self.getValue()
+            self.__type = type(self.__value)
 
-    def __checkValue(self, v_type: type):
-        if v_type != self.__type:
-            return False
+    def __checkValue(self, value:type):
+        """Method to check value type
+
+        Args:
+            value ([type]): value to test
+
+        Raises:
+            SMTypeError: raise an error when the value is a dict or a list
+
+        Returns:
+            [type]: return the initialized value
+        """
+        if value != self.__type:
+            raise SMTypeError(value)
 
         return True
 
     def __encoding(self, value):
+        """Method to encode value
+
+        Args:
+            value ([type]): data to encode
+        """
         data = [_BEGIN]
 
         if type(value) == int or type(value) == float:
             if type(value) == float:
-                value = int("0b" + self.__convertFlaot2Bin(value), 2)
+                value = int("0b" + self.__convertFloat2Bin(value), 2)
                 data.append(_FLOAT)
             else:
                 data.append(_INT)
@@ -215,6 +312,11 @@ class SharedMemory:
             data.append((0xFF0000 & value) >> 16)
             data.append((0xFF00 & value) >> 8)
             data.append((0xFF & value) >> 0)
+
+        elif type(value) == bool:
+            data.append(_BOOL)
+            data.append(1)
+            data.append(0xFF & value)
 
         elif type(value) == str:
             data.append(_STR)
@@ -258,79 +360,137 @@ class SharedMemory:
 
         return data
 
-    def __decoding(self, e_data):
+    def __decoding(self, value):
+        """Method to decode value
+
+        Args:
+            value ([type]): data to decode
+        """
         d_data = 0
 
-        if e_data[0] == _INT or e_data[0] == _FLOAT:
-            d_data = (e_data[2] << 56) + \
-                     (e_data[3] << 48) + \
-                     (e_data[4] << 40) + \
-                     (e_data[5] << 32) + \
-                     (e_data[6] << 24) + \
-                     (e_data[7] << 16) + \
-                     (e_data[8] << 8) + \
-                     (e_data[9] << 0)
+        if value[0] == _INT or value[0] == _FLOAT:
+            d_data = (value[2] << 56) + \
+                     (value[3] << 48) + \
+                     (value[4] << 40) + \
+                     (value[5] << 32) + \
+                     (value[6] << 24) + \
+                     (value[7] << 16) + \
+                     (value[8] << 8) + \
+                     (value[9] << 0)
 
-            if e_data[0] == _FLOAT:
-                d_data = self.__convertBin2Flaot(bin(d_data))
+            if value[0] == _FLOAT:
+                d_data = self.__convertBin2Float(bin(d_data))
 
-        elif e_data[0] == _STR:
-            d_data = (e_data[2] << 64) + \
-                     (e_data[3] << 56) + \
-                     (e_data[4] << 48) + \
-                     (e_data[5] << 40) + \
-                     (e_data[6] << 32) + \
-                     (e_data[7] << 24) + \
-                     (e_data[8] << 16) + \
-                     (e_data[9] << 8) + \
-                     (e_data[10] << 0)
+        elif value[0] == _BOOL:
+
+            d_data = bool(value[2])
+
+        elif value[0] == _STR:
+            d_data = (value[2] << 64) + \
+                     (value[3] << 56) + \
+                     (value[4] << 48) + \
+                     (value[5] << 40) + \
+                     (value[6] << 32) + \
+                     (value[7] << 24) + \
+                     (value[8] << 16) + \
+                     (value[9] << 8) + \
+                     (value[10] << 0)
             d_data = bytearray.fromhex(hex(d_data)[2:]).decode()
 
-        elif e_data[0] == _LIST or e_data[0] == _TUPLE:
-            e_data = e_data[2:]
+        elif value[0] == _LIST or value[0] == _TUPLE:
+            value = value[2:]
             d_data = []
-            c_type = e_data[0]
+            c_type = value[0]
 
-            while len(e_data) != 0:
-                new_data = e_data[:2+e_data[1]]
-                e_data = e_data[2+e_data[1]:]
+            while len(value) != 0:
+                new_data = value[:2+value[1]]
+                value = value[2+value[1]:]
                 d_data.append(self.__decoding(new_data))
 
             if c_type == _TUPLE:
                 d_data = tuple(d_data)
 
-        elif e_data[0] == _DICT:
-            e_data = e_data[2:]
+        elif value[0] == _DICT:
+            value = value[2:]
             d_data = {}
 
-            while len(e_data) != 0:
-                new_key = e_data[:2+e_data[1]]
-                e_data = e_data[2+e_data[1]:]
-                new_data = e_data[:2+e_data[1]]
-                e_data = e_data[2+e_data[1]:]
+            while len(value) != 0:
+                new_key = value[:2+value[1]]
+                value = value[2+value[1]:]
+                new_data = value[:2+value[1]]
+                value = value[2+value[1]:]
                 d_data[self.__decoding(new_key)] = self.__decoding(new_data)
 
         return d_data
 
-    def __convertBin2Flaot(self, b):
-        h = int(b, 2).to_bytes(8, byteorder="big")
+    def __convertBin2Float(self, value:int) -> float:
+        """Method to convert value to float
+
+        Args:
+            value (int): data to convert
+
+        Returns:
+            float: data converted
+        """
+        h = int(value, 2).to_bytes(8, byteorder="big")
         return struct.unpack('>d', h)[0]
 
-    def __convertFlaot2Bin(self, f):
-        [d] = struct.unpack(">Q", struct.pack(">d", f))
+    def __convertFloat2Bin(self, value:float) -> int:
+        """Method to convert value to bin
+
+        Args:
+            value (float): data to convert
+
+        Returns:
+            int: data converted
+        """
+        [d] = struct.unpack(">Q", struct.pack(">d", value))
         return f'{d:064b}'
 
-    def __initValueByJSON(self, path):
+    def __initValueByJSON(self, path:str) -> dict:
+        """Method to extract value from a JSON file
+
+        Args:
+            path (str): path to the JSON file
+
+        Returns:
+            dict: return  data from JSON file
+        """
         json_file = open(path)
         value = json.load(json_file)
         json_file.close()
 
         return value
 
+    def __writeLog(self, log_id:int, message:str):
+        """Write information into a log file
+
+        Args:
+            log_id (int): log id
+            message (str): message to write into the log file
+        """
+        if log_id == 0:
+            logging.info(message)
+        elif log_id == 1:
+            logging.error(message)
+        elif log_id == 2:
+            logging.debug(message)
+        elif log_id == 3:
+            logging.warning(message)
+
     def __getitem__(self, key):
+        """Method to get item value from the shared data
+
+        Args:
+            key ([type]): key
+
+        Raises:
+            TypeError: raise an error when this method is called and tha data shared type is not a dict
+        """
         if not self.__availability:
-            print("TODO: not available")
-            return None
+            if self.__log is not None:
+                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+            raise TypeError("Shared Moemory space doesn't exist.")
 
         self.__value = self.getValue()
 
@@ -344,16 +504,23 @@ class SharedMemory:
             return self.__value
 
     def __setitem__(self, key, value):
+        """Method to update data of the shared space
+
+        Args:
+            key (str): key
+            value ([type]): new key value
+
+        Raises:
+            TypeError: raise an error when this method is called and tha data shared type is not a dict
+        """
         if not self.__availability:
-            print("TODO: not available")
-            return None
+            if self.__log is not None:
+                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+            raise TypeError("Shared Moemory space doesn't exist.")
 
         if self.__type == list:
             if self.__log is not None:
-                print("TODO: log")
-                # self.__writeLog(1, "Data shared type is list not dict.")
-            else:
-                print("INFO: Data shared type is list not dict.")
+                self.__writeLog(1, "Data shared type is list not dict.")
             raise TypeError("Data shared type is list not dict.")
 
         self.__value = self.getValue()
@@ -375,28 +542,58 @@ class SharedMemory:
 
         self.setValue(self.__value)
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """Method that returns the size of the shared data
+
+        Returns:
+            int: size of the shared data
+
+        Raises:
+            TypeError: raise an error when this method is called and tha data shared type is not a dict
+        """
         if not self.__availability:
-            print("TODO: not available")
-            return None
+            if self.__log is not None:
+                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+            raise TypeError("Shared Moemory space doesn't exist.")
 
         self.__value = self.getValue()
 
         return self.__value.__len__()
 
-    def __contains__(self, key):
+    def __contains__(self, key) -> bool:
+        """Method to check if an element is into the shared data
+
+        Args:
+            key ([type]): Element to find
+
+        Returns:
+            bool: boolean to determine if the element is or not into the shared data
+
+        Raises:
+            TypeError: raise an error when this method is called and tha data shared type is not a dict
+        """
         if not self.__availability:
-            print("TODO: not available")
-            return None
+            if self.__log is not None:
+                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+            raise TypeError("Shared Moemory space doesn't exist.")
 
         self.__value = self.getValue()
 
         return self.__value.__contains__(key)
 
     def __delitem__(self, key):
+        """Method to remove an element from the shared data
+
+        Args:
+            key ([type]): Element to remove
+
+        Raises:
+            TypeError: raise an error when this method is called and tha data shared type is not a dict
+        """
         if not self.__availability:
-            print("TODO: not available")
-            return None
+            if self.__log is not None:
+                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+            raise TypeError("Shared Moemory space doesn't exist.")
 
         self.__value = self.getValue()
 
@@ -405,12 +602,14 @@ class SharedMemory:
         self.setValue(self.__value)
 
     def __repr__(self):
+        """Redefined method to print value of the Client Class instance
+
+        Returns:
+            str: printable value of Client Class instance
+        """
         s = "Client: " + str(self.__name) + "\n"\
             + "\tStatus: " + str(self.__state) + "\n"\
             + "\tAvailable: " + self.__availability.__repr__() + "\n"\
             + "\tValue: " + self.__value.__repr__()
 
         return s
-
-    def __writeLog(self):
-        pass

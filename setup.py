@@ -47,6 +47,7 @@ setup(
     description='SharedMemory',
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
+    setup_requires=['posix-ipc'],
     install_requires=['posix-ipc'],
     url='https://github.com/Zentetsu/SharedMemory',
     python_requires='>=3.8',

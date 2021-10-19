@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Dec 10 2020
+Last Modified: Wed Oct 20 2021
 Modified By: Zentetsu
 
 ----
@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 HISTORY:
 2020-07-03	Zen	Creating file
+2021-10-20	Zen	updating required lib
 '''
 
 
@@ -46,7 +47,7 @@ setup(
     description='SharedMemory encapsulation',
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
-    install_requires=[],
+    install_requires=["posix-ipc"],
     url='https://github.com/Zentetsu/SharedMemory',
     python_requires='>=3.8',
 )

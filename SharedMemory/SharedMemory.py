@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Tue Oct 19 2021
+Last Modified: Wed Oct 20 2021
 Modified By: Zentetsu
 
 ----
@@ -34,6 +34,7 @@ HISTORY:
 2021-10-13  Zen Preparing new Shared Memory version
 2021-10-17  Zen Encoding data and adding basic methods + export and import JSON file
 2021-10-19	Zen	Adding comment and logging
+2021-10-20	Zen	Adjusting some behavior
 '''
 
 from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, SMAlreadyExist
@@ -51,6 +52,7 @@ _FLAG = posix_ipc.O_CREX
 
 _BEGIN = 0xAA
 _END = 0xBB
+_CLOSED = 0xAB
 
 _INT = 0x0
 _FLOAT = 0x1
@@ -95,19 +97,17 @@ class SharedMemory:
         self.__type = type(self.__value)
         self.__exist = exist
 
-        self.__state = "Stopped"
-        self.__availability = False
-
         self.__initSharedMemory()
 
     def restart(self):
         """Method to restart the shared memory space
         """
-        if self.__state == "Running":
+        if self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(0, "Client already running.")
             else:
                 print("INFO: Client already running.")
+
             return
 
         self.__initSharedMemory()
@@ -115,40 +115,49 @@ class SharedMemory:
     def close(self):
         """Method to close the shared space
         """
-        if self.__state == "Stopped":
+        if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(0, "Client already stopped.")
             else:
                 print("INFO: Client already stopped.")
+
             return
 
-        if self.__mapfile is not None:
+        if self.__mapfile is not None and not self.__exist:
+            self.__mapfile.seek(0)
+
+            self.__mapfile.write_byte(_BEGIN)
+            self.__mapfile.write_byte(_CLOSED)
+            self.__mapfile.write_byte(_END)
+
             self.__mapfile.close()
             self.__mapfile = None
 
-        if self.__memory is not None:
+        if self.__memory is not None and not self.__exist:
             try:
                 posix_ipc.unlink_shared_memory(self.__name)
             except:
                 if self.__log:
                     self.__writeLog(0, "SharedMemory already closed.")
+
             self.__memory = None
 
-        self.__availability = False
-        self.__state = "Stopped"
-
-    def setValue(self, value):
+    def setValue(self, value) -> bool:
         """Method to set the shared value
 
         Args:
             value ([type]): data to add to the shared memory
+
+        Returns:
+            bool: return if value has been updated
         """
-        if not self.__availability:
+        if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Moemory space doesn't exist.")
             else:
                 print("ERROR: Shared Moemory space doesn't exist.")
-            return None
+
+            return False
 
         if not self.__checkValue(type(value)):
             raise SMTypeError()
@@ -160,17 +169,20 @@ class SharedMemory:
         for d in __data:
             self.__mapfile.write_byte(d)
 
+        return True
+
     def getValue(self):
         """Method to return the shared value
 
         Returns:
             [type]: return data from the shared space
         """
-        if not self.__availability:
+        if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Moemory space doesn't exist.")
             else:
                 print("ERROR: Shared Moemory space doesn't exist.")
+
             return None
 
         encoded_data = []
@@ -182,6 +194,11 @@ class SharedMemory:
             return 0
 
         encoded_data.append(self.__mapfile.read_byte())
+
+        if encoded_data[1] == _CLOSED:
+            print("C TODO")
+            return self.__value
+
         encoded_data.append(self.__mapfile.read_byte())
 
         for _ in range(0, encoded_data[2]):
@@ -206,21 +223,23 @@ class SharedMemory:
         """
         return self.__type
 
-    def getStatus(self) -> str:
-        """Method that return shared memory state
-
-        Returns:
-            str: shared memory state
-        """
-        return self.__state
-
     def getAvailability(self) -> bool:
         """Method that return the availability of Shared Memory
 
         Returns:
             bool: Shared Memory availability status
         """
-        return self.__availability
+        if self.__memory is None or self.__mapfile is None:
+            return False
+
+        encoded_data = []
+        self.__mapfile.seek(0)
+
+        encoded_data.append(self.__mapfile.read_byte())
+        encoded_data.append(self.__mapfile.read_byte())
+        encoded_data.append(self.__mapfile.read_byte())
+
+        return encoded_data != [_BEGIN, _CLOSED, _END]
 
     def exportToJSON(self, path:str):
         """Method to export dict to JSON file
@@ -248,22 +267,34 @@ class SharedMemory:
         self.__memory = None
         self.__mapfile = None
 
-        try:
-            self.__memory = posix_ipc.SharedMemory(self.__name, _FLAG, _MODE)
-            os.ftruncate(self.__memory.fd, self.__size)
-
-            if self.__exist:
+        if not self.__exist:
+            try:
+                self.__memory = posix_ipc.SharedMemory(self.__name, _FLAG, _MODE)
+                os.ftruncate(self.__memory.fd, self.__size)
+            except posix_ipc.ExistentialError:
+                self.close()
+                raise SMAlreadyExist(self.__name)
+        else:
+            try:
+                self.__memory = posix_ipc.SharedMemory(self.__name)
+            except posix_ipc.ExistentialError:
                 self.close()
                 raise SMNotDefined(self.__name)
-        except posix_ipc.ExistentialError:
-            if not self.__exist:
-                raise SMAlreadyExist(self.__name)
 
-            self.__memory = posix_ipc.SharedMemory(self.__name)
+        # try:
+        #     self.__memory = posix_ipc.SharedMemory(self.__name, _FLAG, _MODE)
+        #     os.ftruncate(self.__memory.fd, self.__size)
+
+        #     if self.__exist:
+        #         self.close()
+        #         raise SMNotDefined(self.__name)
+        # except posix_ipc.ExistentialError:
+        #     if not self.__exist:
+        #         raise SMAlreadyExist(self.__name)
+
+        #     self.__memory = posix_ipc.SharedMemory(self.__name)
 
         self.__mapfile = mmap.mmap(self.__memory.fd, self.__size)
-        self.__availability = True
-        self.__state = "Running"
 
         if not self.__exist:
             self.setValue(self.__value)
@@ -433,6 +464,7 @@ class SharedMemory:
             float: data converted
         """
         h = int(value, 2).to_bytes(8, byteorder="big")
+
         return struct.unpack('>d', h)[0]
 
     def __convertFloat2Bin(self, value:float) -> int:
@@ -445,6 +477,7 @@ class SharedMemory:
             int: data converted
         """
         [d] = struct.unpack(">Q", struct.pack(">d", value))
+
         return f'{d:064b}'
 
     def __initValueByJSON(self, path:str) -> dict:
@@ -487,9 +520,10 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
-        if not self.__availability:
+        if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Moemory space doesn't exist.")
+
             raise TypeError("Shared Moemory space doesn't exist.")
 
         self.__value = self.getValue()
@@ -513,14 +547,16 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
-        if not self.__availability:
+        if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Moemory space doesn't exist.")
+
             raise TypeError("Shared Moemory space doesn't exist.")
 
         if self.__type == list:
             if self.__log is not None:
                 self.__writeLog(1, "Data shared type is list not dict.")
+
             raise TypeError("Data shared type is list not dict.")
 
         self.__value = self.getValue()
@@ -551,9 +587,10 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
-        if not self.__availability:
+        if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Moemory space doesn't exist.")
+
             raise TypeError("Shared Moemory space doesn't exist.")
 
         self.__value = self.getValue()
@@ -572,9 +609,10 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
-        if not self.__availability:
+        if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Moemory space doesn't exist.")
+
             raise TypeError("Shared Moemory space doesn't exist.")
 
         self.__value = self.getValue()
@@ -590,9 +628,10 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
-        if not self.__availability:
+        if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Moemory space doesn't exist.")
+
             raise TypeError("Shared Moemory space doesn't exist.")
 
         self.__value = self.getValue()
@@ -608,8 +647,7 @@ class SharedMemory:
             str: printable value of Client Class instance
         """
         s = "Client: " + str(self.__name) + "\n"\
-            + "\tStatus: " + str(self.__state) + "\n"\
-            + "\tAvailable: " + self.__availability.__repr__() + "\n"\
+            + "\tAvailable: " + self.getAvailability().__repr__() + "\n"\
             + "\tValue: " + self.__value.__repr__()
 
         return s

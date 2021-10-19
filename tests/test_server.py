@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Tue Oct 19 2021
+Last Modified: Wed Oct 20 2021
 Modified By: Zentetsu
 
 ----
@@ -40,8 +40,8 @@ HISTORY:
 2020-07-01	Zen	Creating file
 '''
 
-import sys
-sys.path.insert(0, "../")
+# import sys
+# sys.path.insert(0, "../")
 
 from SharedMemory.SharedMemory import SharedMemory
 import contextlib
@@ -52,19 +52,18 @@ def test_connection():
         # with contextlib.redirect_stdout(None):
         s = SharedMemory("test1", log="./test_server.log", exist=True)
         s.close()
-        assert False
         print("FAILED")
     except:
-        print("SUCCESSED")
         assert True
+        print("SUCCESSED")
 
 def test_connection2():
     print("Create Server instance with Client(after):", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test2", "azerty", log="./test_server.log")
-        s = SharedMemory("test2", log="./test_server.log", exist=True)
-        res =  s.getAvailability() and s.getAvailability()
+        c = SharedMemory("test27", "azerty", log="./test_server.log")
+        s = SharedMemory("test27", log="./test_server.log", exist=True)
+        res = c.getAvailability() and s.getAvailability()
         c.close()
         s.close()
         assert res
@@ -77,9 +76,9 @@ def test_connection3():
     print("Create Server instance with Client(before):", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        s = SharedMemory("test3", log="./test_server.log", exist=True)
-        c = SharedMemory("test3", "azerty", log="./test_server.log")
-        res = s.getAvailability()[0] and s.getAvailability()[1]
+        s = SharedMemory("test31", log="./test_server.log", exist=True)
+        c = SharedMemory("test31", "azerty", log="./test_server.log")
+        res = s.getAvailability() and c.getAvailability()
         c.close()
         s.close()
         assert res
@@ -92,8 +91,8 @@ def test_value():
     print("Server check value \"azerty\":", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test4", "azerty", log="./test_server.log")
-        s = SharedMemory("test4", log="./test_server.log", exist=True)
+        c = SharedMemory("test41", "azerty", log="./test_server.log")
+        s = SharedMemory("test41", log="./test_server.log", exist=True)
         res = s.getValue() == "azerty"
         c.close()
         s.close()
@@ -107,8 +106,8 @@ def test_editValue():
     print("Server edit value \"azerty\" to \"ytreza\":", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test5", "azerty", log="./test_server.log")
-        s = SharedMemory("test5", log="./test_server.log", exist=True)
+        c = SharedMemory("test51", "azerty", log="./test_server.log")
+        s = SharedMemory("test51", log="./test_server.log", exist=True)
         s.setValue("ytreza")
         res1 = c.getValue() == "ytreza"
         res2 = c[0]== "ytreza"
@@ -125,16 +124,13 @@ def test_clientStopped():
     print("Server test access value when Client stopped:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test5", "azerty", log="./test_server.log")
-        s = SharedMemory("test5", log="./test_server.log", exist=True)
+        c = SharedMemory("test62", "azerty", log="./test_server.log")
+        s = SharedMemory("test62", log="./test_server.log", exist=True)
         c.close()
         s.setValue("toto")
-        print(s.getValue())
-        res1 = s.getValue() == "azerty"
-        res2 = s[0] == "azerty"
+        res1 = s.getValue() == None
         s.close()
         assert res1
-        assert res2
         print("SUCCESSED")
     except:
         print("FAILED")
@@ -144,13 +140,13 @@ def test_serverStopped():
     print("Client test access value when Server stopped:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = Client("test5", "azerty", log="./test_server.log")
-        s = SharedMemory("test5", log="./test_server.log", exist=True)
+        c = SharedMemory("test8", "azerty", log="./test_server.log")
+        s = SharedMemory("test8", log="./test_server.log", exist=True)
         s.close()
-        c.updateValue("toto")
+        c.setValue("toto")
         assert c.getValue() == "toto"
         assert c[0] == "toto"
-        s.connect()
+        s.restart()
         c.close()
         print("SUCCESSED")
     except:
@@ -161,8 +157,8 @@ def test_multiStop():
     print("Server test mutli stop:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = Client("test6", "azerty", log="./test_server.log")
-        s = SharedMemory("test6", log="./test_server.log", exist=True)
+        c = SharedMemory("test9", "azerty", log="./test_server.log")
+        s = SharedMemory("test9", log="./test_server.log", exist=True)
         s.close()
         s.close()
         c.close()
@@ -176,12 +172,14 @@ def test_availability():
     print("Check availability for Client and Server:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = Client("test7", "azerty", log="./test_server.log")
-        s = SharedMemory("test7", log="./test_server.log", exist=True)
-        assert c.getAvailability() == (True, True)
-        assert s.getAvailability() == (True, True)
+        c = SharedMemory("test10", "azerty", log="./test_server.log")
+        s = SharedMemory("test10", log="./test_server.log", exist=True)
+        res1 = c.getAvailability() == True
+        res2 =  s.getAvailability() == True
         s.close()
         c.close()
+        assert res1
+        assert res2
         print("SUCCESSED")
     except:
         print("FAILED")

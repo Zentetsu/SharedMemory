@@ -44,10 +44,10 @@ setup(
     author='Zentetsu',
     packages=find_packages(exclude=['tests*']),
     license='GPLv3',
-    description='SharedMemory encapsulation',
+    description='SharedMemory',
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
-    install_requires=['posix-ipc'],
+    install_requires=['posix_ipc'],
     url='https://github.com/Zentetsu/SharedMemory',
     python_requires='>=3.8',
 )

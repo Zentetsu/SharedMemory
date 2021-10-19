@@ -1,17 +1,18 @@
 # SharedMemory
 
-Encapsulation of the python shared_memory library.
+Python shared memory library based an posix-ipc.
 
 ### Features
 * Shared type:
     * Basic type (int, float, bool, str)
-    * list and dict
-* Mutex
-* Timeout for Mutex
+    * list, tuple and dict
 * Management of the availability of shared memory space
 * Overloaded methods for list and dict
 
 ### Future improvement
+* Mutex
+* Timeout for Mutex
+* Adding nparray support
 * Adding more tests
 
 ### Example

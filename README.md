@@ -20,16 +20,13 @@ Example of execution in two instances of ipython.
 
 #### Client side
 ```python
-In [1]: from SharedMemory import Client
+In [1]: from SharedMemory import SharedMemory
 
 In [2]: # Creating client instance with a shared space named 'shared_space' with a size of 10
-   ...: C = Client(name="shared_space", value="Hello", size=10, timeout=1)
+   ...: C = SharedMemory(name="shared_space", value="Hello", exist=False)
 
-In [3]: C.getStatus()
-Out[3]: 'Started'
-
-In [4]: C.getAvailability() # First boolean: Client Availability, Second boolean: Server Availability
-Out[4]: (True, True)
+In [4]: C.getAvailability()
+Out[4]: True
 
 In [5]: C.getValue()
 Out[5]: 'Hello'
@@ -39,31 +36,33 @@ In [6]: # Waiting for Server to update shared data
 In [7]: C.getValue()
 Out[7]: 'World'
 
-In [8]: C.updateValue('HW')
+In [8]: C.setValue('HW')
+Out[8]: True
 
 In [9]: C.getValue()
 Out[9]: 'HW'
 
 In [10]: # Closing the client side
-    ...: C.stop()
+    ...: C.close()
+
+In [11]: C.getAvailability()
+Out[11]: False
 ```
 #### Server side
 ```python
-In [1]: from SharedMemory import Server
+In [1]: from SharedMemory import SharedMemory
 
 In [2]: # Creating server instance access to the shared named 'shared_space'
-   ...: S = Server(name="shared_space", timeout=1)
+   ...: S = SharedMemory(name="shared_space", exist=True)
 
-In [3]: S.getStatus()
-Out[3]: 'Connected'
-
-In [4]: S.getAvailability() # First boolean: Server Availability, Second boolean: Client Availability
-Out[4]: (True, True)
+In [4]: S.getAvailability()
+Out[4]: True
 
 In [5]: S.getValue()
 Out[5]: 'Hello'
 
-In [6]: S.updateValue("World")
+In [6]: S.setValue("World")
+Out[6]: True
 
 In [7]: S.getValue()
 Out[7]: 'Hello'
@@ -73,8 +72,15 @@ In [8]: # Waiting for Client to update shared data
 In [9]: S.getValue()
 Out[9]: 'HW'
 
-In [10]: # Closing the server side
-    ...: S.stop()
+In [10]: # Waiting Client to close the shared space
+
+In [11]: S.getAvailability()
+Out[11]: False
+
+
+In [12]: # Closing the server side
+    ...: S.close()
+INFO: Client already stopped.
 ```
 
 

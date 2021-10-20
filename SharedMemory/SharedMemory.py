@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Wed Oct 20 2021
+Last Modified: Thu Oct 21 2021
 Modified By: Zentetsu
 
 ----
@@ -35,6 +35,7 @@ HISTORY:
 2021-10-17  Zen Encoding data and adding basic methods + export and import JSON file
 2021-10-19	Zen	Adding comment and logging
 2021-10-20	Zen	Adjusting some behavior
+2021-10-21	Zen	Adjusting close and restart methods
 '''
 
 from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, SMAlreadyExist
@@ -123,7 +124,7 @@ class SharedMemory:
 
             return
 
-        if self.__mapfile is not None and not self.__exist:
+        if self.__mapfile is not None:
             self.__mapfile.seek(0)
 
             self.__mapfile.write_byte(_BEGIN)
@@ -133,7 +134,7 @@ class SharedMemory:
             self.__mapfile.close()
             self.__mapfile = None
 
-        if self.__memory is not None and not self.__exist:
+        if self.__memory is not None:
             try:
                 posix_ipc.unlink_shared_memory(self.__name)
             except:
@@ -153,9 +154,9 @@ class SharedMemory:
         """
         if not self.getAvailability():
             if self.__log is not None:
-                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+                self.__writeLog(1, "Shared Memory space doesn't exist.")
             else:
-                print("ERROR: Shared Moemory space doesn't exist.")
+                print("ERROR: Shared Memory space doesn't exist.")
 
             return False
 
@@ -179,9 +180,9 @@ class SharedMemory:
         """
         if not self.getAvailability():
             if self.__log is not None:
-                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+                self.__writeLog(1, "Shared Memory space doesn't exist.")
             else:
-                print("ERROR: Shared Moemory space doesn't exist.")
+                print("ERROR: Shared Memory space doesn't exist.")
 
             return None
 
@@ -229,17 +230,17 @@ class SharedMemory:
         Returns:
             bool: Shared Memory availability status
         """
-        if self.__memory is None or self.__mapfile is None:
+        try:
+            encoded_data = []
+            self.__mapfile.seek(0)
+
+            encoded_data.append(self.__mapfile.read_byte())
+            encoded_data.append(self.__mapfile.read_byte())
+            encoded_data.append(self.__mapfile.read_byte())
+
+            return encoded_data != [_BEGIN, _CLOSED, _END]
+        except:
             return False
-
-        encoded_data = []
-        self.__mapfile.seek(0)
-
-        encoded_data.append(self.__mapfile.read_byte())
-        encoded_data.append(self.__mapfile.read_byte())
-        encoded_data.append(self.__mapfile.read_byte())
-
-        return encoded_data != [_BEGIN, _CLOSED, _END]
 
     def exportToJSON(self, path:str):
         """Method to export dict to JSON file
@@ -272,27 +273,17 @@ class SharedMemory:
                 self.__memory = posix_ipc.SharedMemory(self.__name, _FLAG, _MODE)
                 os.ftruncate(self.__memory.fd, self.__size)
             except posix_ipc.ExistentialError:
-                self.close()
-                raise SMAlreadyExist(self.__name)
+                if self.__value is not None:
+                    self.__memory = posix_ipc.SharedMemory(self.__name)
+                else:
+                    self.close()
+                    raise SMAlreadyExist(self.__name)
         else:
             try:
                 self.__memory = posix_ipc.SharedMemory(self.__name)
             except posix_ipc.ExistentialError:
                 self.close()
                 raise SMNotDefined(self.__name)
-
-        # try:
-        #     self.__memory = posix_ipc.SharedMemory(self.__name, _FLAG, _MODE)
-        #     os.ftruncate(self.__memory.fd, self.__size)
-
-        #     if self.__exist:
-        #         self.close()
-        #         raise SMNotDefined(self.__name)
-        # except posix_ipc.ExistentialError:
-        #     if not self.__exist:
-        #         raise SMAlreadyExist(self.__name)
-
-        #     self.__memory = posix_ipc.SharedMemory(self.__name)
 
         self.__mapfile = mmap.mmap(self.__memory.fd, self.__size)
 
@@ -522,9 +513,11 @@ class SharedMemory:
         """
         if not self.getAvailability():
             if self.__log is not None:
-                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+                self.__writeLog(1, "Shared Memory space doesn't exist.")
+            else:
+                print("ERROR: Shared Memory space doesn't exist.")
 
-            raise TypeError("Shared Moemory space doesn't exist.")
+            return None
 
         self.__value = self.getValue()
 
@@ -549,9 +542,11 @@ class SharedMemory:
         """
         if not self.getAvailability():
             if self.__log is not None:
-                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+                self.__writeLog(1, "Shared Memory space doesn't exist.")
+            else:
+                print("ERROR: Shared Memory space doesn't exist.")
 
-            raise TypeError("Shared Moemory space doesn't exist.")
+            return None
 
         if self.__type == list:
             if self.__log is not None:
@@ -589,9 +584,11 @@ class SharedMemory:
         """
         if not self.getAvailability():
             if self.__log is not None:
-                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+                self.__writeLog(1, "Shared Memory space doesn't exist.")
+            else:
+                print("ERROR: Shared Memory space doesn't exist.")
 
-            raise TypeError("Shared Moemory space doesn't exist.")
+            return None
 
         self.__value = self.getValue()
 
@@ -611,9 +608,11 @@ class SharedMemory:
         """
         if not self.getAvailability():
             if self.__log is not None:
-                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+                self.__writeLog(1, "Shared Memory space doesn't exist.")
+            else:
+                print("ERROR: Shared Memory space doesn't exist.")
 
-            raise TypeError("Shared Moemory space doesn't exist.")
+            return None
 
         self.__value = self.getValue()
 
@@ -630,9 +629,11 @@ class SharedMemory:
         """
         if not self.getAvailability():
             if self.__log is not None:
-                self.__writeLog(1, "Shared Moemory space doesn't exist.")
+                self.__writeLog(1, "Shared Memory space doesn't exist.")
+            else:
+                print("ERROR: Shared Memory space doesn't exist.")
 
-            raise TypeError("Shared Moemory space doesn't exist.")
+            return None
 
         self.__value = self.getValue()
 

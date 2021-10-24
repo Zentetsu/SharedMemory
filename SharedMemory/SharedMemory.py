@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Oct 21 2021
+Last Modified: Sun Oct 24 2021
 Modified By: Zentetsu
 
 ----
@@ -38,6 +38,7 @@ HISTORY:
 2021-10-21	Zen	Adjusting close and restart methods
 '''
 
+from abc import ABC, abstractmethod
 from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, SMAlreadyExist
 import posix_ipc
 import logging
@@ -92,10 +93,6 @@ class SharedMemory:
             self.__value = self.__initValueByJSON(path)
         else:
             self.__value = value
-            self.__size = size
-
-        self.__name = _SHM_NAME_PREFIX + name
-        self.__type = type(self.__value)
         self.__exist = exist
 
         self.__initSharedMemory()
@@ -230,17 +227,20 @@ class SharedMemory:
         Returns:
             bool: Shared Memory availability status
         """
-        try:
-            encoded_data = []
-            self.__mapfile.seek(0)
+        if self.__memory is None or self.__mapfile is None:
+            try:
+                self.__initSharedMemory()
+            except:
+                return False
 
-            encoded_data.append(self.__mapfile.read_byte())
-            encoded_data.append(self.__mapfile.read_byte())
-            encoded_data.append(self.__mapfile.read_byte())
+        encoded_data = []
+        self.__mapfile.seek(0)
 
-            return encoded_data != [_BEGIN, _CLOSED, _END]
-        except:
-            return False
+        encoded_data.append(self.__mapfile.read_byte())
+        encoded_data.append(self.__mapfile.read_byte())
+        encoded_data.append(self.__mapfile.read_byte())
+
+        return encoded_data != [_BEGIN, _CLOSED, _END]
 
     def exportToJSON(self, path:str):
         """Method to export dict to JSON file

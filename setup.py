@@ -40,7 +40,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='SharedMemory',
-    version='0.5.0-dev0',
+    version='1.0.0',
     author='Zentetsu',
     packages=find_packages(exclude=['tests*']),
     license='GPLv3',

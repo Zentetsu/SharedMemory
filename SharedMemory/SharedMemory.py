@@ -39,7 +39,7 @@ HISTORY:
 '''
 
 from abc import ABC, abstractmethod
-from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, SMAlreadyExist
+from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, SMAlreadyExist, SMEncoding
 import posix_ipc
 import logging
 import struct
@@ -88,6 +88,7 @@ class SharedMemory:
         if value is None and path is None and not exist or value is not None and path is not None:
             if self.__log is not None:
                 self.__writeLog(1, "Conflict between value and json path intialization.")
+
             raise SMMultiInputError
         elif value is None and path is not None:
             self.__value = self.__initValueByJSON(path)
@@ -104,6 +105,14 @@ class SharedMemory:
     def restart(self):
         """Method to restart the shared memory space
         """
+        if not self.__client:
+            if self.__log is not None:
+                self.__writeLog(3, "Only client can restart Shared Memory space.")
+            else:
+                print("WARNING: Only client can restart Shared Memory space.")
+
+            return
+
         if self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(0, "Client already running.")
@@ -117,6 +126,14 @@ class SharedMemory:
     def close(self):
         """Method to close the shared space
         """
+        if not self.__client:
+            if self.__log is not None:
+                self.__writeLog(3, "Only client can restart Shared Memory space.")
+            else:
+                print("WARNING: Only client can restart Shared Memory space.")
+
+            return
+
         if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(0, "Client already stopped.")
@@ -192,14 +209,12 @@ class SharedMemory:
 
         encoded_data.append(self.__mapfile.read_byte())
         if encoded_data[0] != _BEGIN:
-            print("B TODO")
-            return 0
+            raise SMEncoding("BEGIN")
 
         encoded_data.append(self.__mapfile.read_byte())
 
         if encoded_data[1] == _CLOSED:
-            print("C TODO")
-            return self.__value
+            raise SMEncoding("CLOSED")
 
         encoded_data.append(self.__mapfile.read_byte())
 
@@ -208,8 +223,7 @@ class SharedMemory:
 
         encoded_data.append(self.__mapfile.read_byte())
         if encoded_data[len(encoded_data)-1] != _END:
-            print("E TODO")
-            return 0
+            raise SMEncoding("END")
 
         decoded_data = self.__decoding(encoded_data[1:len(encoded_data)-1])
 
@@ -255,6 +269,7 @@ class SharedMemory:
         if self.__type is not dict:
             if self.__log is not None:
                 self.__writeLog(1, "Data type must be dict.")
+
             raise TypeError("Data type must be dict.")
 
         file = open(path, 'w+')
@@ -264,10 +279,6 @@ class SharedMemory:
     def __initSharedMemory(self):
         """Method to initialize the shared space
         """
-        if type(self.__value) is list and type in [type(e) for e in self.__value]:
-            for i in range(0, len(self.__value)):
-                self.__value[i] = self.__checkValue(self.__value[i])
-
         self.__size = sys.getsizeof(self.__value)
         self.__memory = None
         self.__mapfile = None
@@ -282,12 +293,16 @@ class SharedMemory:
                 else:
                     self.close()
                     raise SMAlreadyExist(self.__name)
+
+            self.__client = True
         else:
             try:
                 self.__memory = posix_ipc.SharedMemory(self.__name)
             except posix_ipc.ExistentialError:
                 self.close()
                 raise SMNotDefined(self.__name)
+
+            self.__client = False
 
         self.__mapfile = mmap.mmap(self.__memory.fd, self.__size)
 
@@ -528,6 +543,7 @@ class SharedMemory:
         if self.__type == dict:
             if type(key) is int:
                 key = str(key)
+
             return self.__value[key]
         elif self.__type == list:
             return self.__value[key]

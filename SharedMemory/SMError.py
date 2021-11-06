@@ -119,3 +119,23 @@ class SMAlreadyExist(Exception):
             self.message = message
 
         super().__init__(self.message)
+
+class SMEncoding(Exception):
+    """Class focused on catching an attempt to create an intialized shared memory
+
+    Args:
+        Exception (Exception):
+    """
+    def __init__(self, name, message=None):
+        """Class constructor
+
+        Args:
+            name (str): shared memory name
+            message (str, optional): message. Defaults to None.
+        """
+        if message is None:
+            self.message = "Error in '" + name + "' trame value."
+        else:
+            self.message = message
+
+        super().__init__(self.message)

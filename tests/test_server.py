@@ -136,22 +136,23 @@ def test_clientStopped():
         print("FAILED")
         assert False
 
-# def test_serverStopped():
-    # print("Client test access value when Server stopped:", end=" ")
-    # try:
-    #     # with contextlib.redirect_stdout(None):
-    #     c = SharedMemory("test8", "azerty", log="./test_server.log")
-    #     s = SharedMemory("test8", log="./test_server.log", exist=True)
-    #     s.close()
-    #     c.setValue("toto")
-    #     assert c.getValue() == None
-    #     assert c[0] == None
-    #     s.restart()
-    #     c.close()
-    #     print("FAILED")
-    # except:
-    #     print("SUCCESSED")
-    #     assert True
+def test_serverStopped():
+    print("Client test access value when Server stopped:", end=" ")
+    try:
+        # with contextlib.redirect_stdout(None):
+        c = SharedMemory("test8", "azerty", log="./test_server.log")
+        s = SharedMemory("test8", log="./test_server.log", exist=True)
+        s.close()
+        c.setValue("toto")
+        print(c[0])
+        assert c.getValue() == "toto"
+        assert c[0] == "toto"
+        s.restart()
+        c.close()
+        print("SUCCESSED")
+    except:
+        print("FAILED")
+        assert False
 
 def test_multiStop():
     print("Server test mutli stop:", end=" ")
@@ -192,7 +193,7 @@ test_connection3()
 test_value()
 test_editValue()
 test_clientStopped()
-# test_serverStopped()
+test_serverStopped()
 test_multiStop()
 test_availability()
 print("-"*10)

@@ -126,14 +126,6 @@ class SharedMemory:
     def close(self):
         """Method to close the shared space
         """
-        if not self.__client:
-            if self.__log is not None:
-                self.__writeLog(3, "Only client can restart Shared Memory space.")
-            else:
-                print("WARNING: Only client can restart Shared Memory space.")
-
-            return
-
         if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(0, "Client already stopped.")
@@ -245,20 +237,23 @@ class SharedMemory:
         Returns:
             bool: Shared Memory availability status
         """
-        if self.__memory is None or self.__mapfile is None:
+        if self.__memory is None and self.__mapfile is None and not self.__client:
             try:
                 self.__initSharedMemory()
             except:
                 return False
 
-        encoded_data = []
-        self.__mapfile.seek(0)
+        try:
+            encoded_data = []
+            self.__mapfile.seek(0)
 
-        encoded_data.append(self.__mapfile.read_byte())
-        encoded_data.append(self.__mapfile.read_byte())
-        encoded_data.append(self.__mapfile.read_byte())
+            encoded_data.append(self.__mapfile.read_byte())
+            encoded_data.append(self.__mapfile.read_byte())
+            encoded_data.append(self.__mapfile.read_byte())
 
-        return encoded_data != [_BEGIN, _CLOSED, _END]
+            return encoded_data != [_BEGIN, _CLOSED, _END]
+        except:
+            return False
 
     def exportToJSON(self, path:str):
         """Method to export dict to JSON file

@@ -144,11 +144,17 @@ def test_serverStopped():
         s = SharedMemory("test8", log="./test_server.log", exist=True)
         s.close()
         c.setValue("toto")
-        print(c[0])
+        assert c.getValue() == None
+        assert c[0] == None
+        c.restart()
+        c.setValue("toto")
         assert c.getValue() == "toto"
         assert c[0] == "toto"
         s.restart()
+        assert s.getValue() == "toto"
+        assert s[0] == "toto"
         c.close()
+        s.close()
         print("SUCCESSED")
     except:
         print("FAILED")

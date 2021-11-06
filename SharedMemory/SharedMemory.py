@@ -93,6 +93,10 @@ class SharedMemory:
             self.__value = self.__initValueByJSON(path)
         else:
             self.__value = value
+            self.__size = size
+
+        self.__name = _SHM_NAME_PREFIX + name
+        self.__type = type(self.__value)
         self.__exist = exist
 
         self.__initSharedMemory()

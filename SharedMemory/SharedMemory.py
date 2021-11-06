@@ -667,3 +667,12 @@ class SharedMemory:
             + "\tValue: " + self.__value.__repr__()
 
         return s
+
+    @staticmethod
+    def getSharedMemorySpace():
+        if os.name == "Windows" or os.name == "Darwin":
+            print("Not yet implemented.")
+
+            return
+
+        return next(os.walk("/dev/shm/"), (None, None, []))[2]

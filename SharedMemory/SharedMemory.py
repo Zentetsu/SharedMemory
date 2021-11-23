@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sun Oct 24 2021
+Last Modified: Wed Nov 24 2021
 Modified By: Zentetsu
 
 ----
@@ -36,6 +36,7 @@ HISTORY:
 2021-10-19	Zen	Adding comment and logging
 2021-10-20	Zen	Adjusting some behavior
 2021-10-21	Zen	Adjusting close and restart methods
+2021-11-24	Zen	SharedMemory init size fixed
 '''
 
 from abc import ABC, abstractmethod
@@ -293,6 +294,7 @@ class SharedMemory:
         else:
             try:
                 self.__memory = posix_ipc.SharedMemory(self.__name)
+                self.__size = self.__memory.size
             except posix_ipc.ExistentialError:
                 self.close()
                 raise SMNotDefined(self.__name)

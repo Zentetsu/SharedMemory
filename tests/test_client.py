@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Wed Oct 20 2021
+Last Modified: Thu Nov 25 2021
 Modified By: Zentetsu
 
 ----
@@ -51,7 +51,7 @@ def test_str():
     print("Create Client instance containing a \"string\":", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test1", "azerty", log='./test_client.log')
+        c = SharedMemory("test1", "azerty", log='./test_client.log', client=True)
         assert type(c.getValue()) is str
         assert type(c[0]) is str
         c.close()
@@ -64,7 +64,7 @@ def test_int():
     print("Create Client instance containing an \"int\":", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test27", 1, log='./test_client.log')
+        c = SharedMemory("test27", 1, log='./test_client.log', client=True)
         res1 = type(c.getValue()) is int
         res2 = type(c[0]) is int
         res3 = c.getValue() == 1
@@ -80,7 +80,7 @@ def test_float():
     print("Create Client instance containing a \"float\":", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test31", 1.2, log='./test_client.log')
+        c = SharedMemory("test31", 1.2, log='./test_client.log', client=True)
         res1 = type(c.getValue()) is float
         res2 = type(c[0]) is float
         res3 = c.getValue() == 1.2
@@ -96,7 +96,7 @@ def test_bool():
     print("Create Client instance containing a \"boolean\":", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test41", True, log='./test_client.log')
+        c = SharedMemory("test41", True, log='./test_client.log', client=True)
         res1 = type(c.getValue()) is bool
         res2 = type(c[0]) is bool
         res3 = c.getValue()
@@ -112,7 +112,7 @@ def test_dict1():
     print("Create Client instance containing a \"dict\":", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test51", {'a': 1}, log='./test_client.log')
+        c = SharedMemory("test51", {'a': 1}, log='./test_client.log', client=True)
         res1 = type(c.getValue()) is dict
         res2 = c.getType() is dict
         res3 = c.getValue()['a'] == 1
@@ -128,7 +128,7 @@ def test_list1():
     print("Create Client instance containing a \"list\":", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test61", [0, 1], log='./test_client.log')
+        c = SharedMemory("test61", [0, 1], log='./test_client.log', client=True)
         res1 = type(c.getValue()) is list
         res2 = c.getType() is list
         res3 = c.getValue()[0] == 0
@@ -146,7 +146,7 @@ def test_list1():
     # print("Create Client instance containing a \"[int, bool, str]\":", end=" ")
     # try:
     #     # with contextlib.redirect_stdout(None):
-    #     c = SharedMemory("test7", [int, bool, str], log='./test_client.log', exist=True)
+    #     c = SharedMemory("test7", [int, bool, str], log='./test_client.log', exist=True, client=True)
     #     print("tot")
     #     assert type(c.getValue()) is list
     #     assert c.getType() is list
@@ -166,7 +166,7 @@ def test_list1():
     # print("Create Client instance containing a \"[int, 10.2, str]\":", end=" ")
     # try:
     #     # with contextlib.redirect_stdout(None):
-    #     c = SharedMemory("test8", [int, 10.2, str], log='./test_client.log', exist=True)
+    #     c = SharedMemory("test8", [int, 10.2, str], log='./test_client.log', exist=True, client=True)
     #     assert type(c.getValue()) is list
     #     assert c.getType() is list
     #     assert type(c.getValue()[0]) is int
@@ -185,7 +185,7 @@ def test_file():
     print("Create Client instance from JSON file:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory(name="test9", path="./tests/test.json", log='./test_client.log')
+        c = SharedMemory(name="test9", path="./tests/test.json", log='./test_client.log', client=True)
         res = type(c.getValue()) is dict
         c.close()
         assert res
@@ -198,7 +198,7 @@ def test_newValue():
     print("Update Client value:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test10", 1, log='./test_client.log')
+        c = SharedMemory("test10", 1, log='./test_client.log', client=True)
         c.setValue(12)
         res1 = c.getValue() == 12
         res2 = c[0] == 12
@@ -213,7 +213,7 @@ def test_stop():
     print("Stop Client:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test11", 1, log='./test_client.log')
+        c = SharedMemory("test11", 1, log='./test_client.log', client=True)
         c.close()
         assert True
         print("SUCCESSED")
@@ -225,7 +225,7 @@ def test_call():
     print("Stop Client 2:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test12", 1, log='./test_client.log')
+        c = SharedMemory("test12", 1, log='./test_client.log', client=True)
         c.close()
         c.close()
         assert True
@@ -238,7 +238,7 @@ def test_call2():
     print("Stop Client 3:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test13", 1, log='./test_client.log')
+        c = SharedMemory("test13", 1, log='./test_client.log', client=True)
         c.restart()
         c.close()
         assert True
@@ -251,7 +251,7 @@ def test_valueAccess():
     print("Deleting value from overloaded method:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test13", {'0':0, '1':1, '2':2, '3':3}, log='./test_client.log')
+        c = SharedMemory("test13", {'0':0, '1':1, '2':2, '3':3}, log='./test_client.log', client=True)
         c.restart()
         del c['0']
         c.close()

@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Wed Nov 24 2021
+Last Modified: Thu Nov 25 2021
 Modified By: Zentetsu
 
 ----
@@ -37,6 +37,7 @@ HISTORY:
 2021-10-20	Zen	Adjusting some behavior
 2021-10-21	Zen	Adjusting close and restart methods
 2021-11-24	Zen	SharedMemory init size fixed
+2021-11-25	Zen	Changing Server behavior
 '''
 
 from abc import ABC, abstractmethod
@@ -70,7 +71,7 @@ _NPARRAY = 0x8
 class SharedMemory:
     """Shared Memory class
     """
-    def __init__(self, name:str, value=None, path:str=None, size:int=8, exist:bool=False, log:str=None):
+    def __init__(self, name:str, value=None, path:str=None, size:int=8, client:bool=False, log:str=None):
         """Class constructor
 
         Args:
@@ -78,7 +79,7 @@ class SharedMemory:
             value ([type], optional): value to share with the other Server. Defaults to None.
             path (str, optional): path to load JSON file and sharing data inside. Defaults to None.
             size (int, optional): size of the shared space or str value. Defaults to 10.
-            exist (bool, optional): will authorize to access to an existing shared memory space
+            client (bool, optional): will creat a client or server instance
             timeout (int, optional): mutex timeout. Defaults to 1.
 
         Raises:
@@ -86,20 +87,25 @@ class SharedMemory:
         """
         self.__log = log
 
-        if value is None and path is None and not exist or value is not None and path is not None:
+        if client and (value is None and path is None or value is not None and path is not None):
             if self.__log is not None:
                 self.__writeLog(1, "Conflict between value and json path intialization.")
 
             raise SMMultiInputError
-        elif value is None and path is not None:
+        elif client and value is None and path is not None:
             self.__value = self.__initValueByJSON(path)
+        elif not client and (value is not None or path is not None):
+            if self.__log is not None:
+                self.__writeLog(1, "Conflict between value and json path intialization.")
+
+            raise SMMultiInputError
         else:
             self.__value = value
             self.__size = size
 
         self.__name = _SHM_NAME_PREFIX + name
         self.__type = type(self.__value)
-        self.__exist = exist
+        self.__client = client
 
         self.__initSharedMemory()
 
@@ -279,7 +285,7 @@ class SharedMemory:
         self.__memory = None
         self.__mapfile = None
 
-        if not self.__exist:
+        if self.__client:
             try:
                 self.__memory = posix_ipc.SharedMemory(self.__name, _FLAG, _MODE)
                 os.ftruncate(self.__memory.fd, self.__size)
@@ -289,21 +295,21 @@ class SharedMemory:
                 else:
                     self.close()
                     raise SMAlreadyExist(self.__name)
-
-            self.__client = True
         else:
             try:
                 self.__memory = posix_ipc.SharedMemory(self.__name)
                 self.__size = self.__memory.size
             except posix_ipc.ExistentialError:
-                self.close()
-                raise SMNotDefined(self.__name)
+                if self.__log is not None:
+                    self.__writeLog(3, "Memory space not yet created.")
+                else:
+                    print("WARNING: Memory space not yet created.")
 
-            self.__client = False
+                return
 
         self.__mapfile = mmap.mmap(self.__memory.fd, self.__size)
 
-        if not self.__exist:
+        if self.__client:
             self.setValue(self.__value)
         else:
             self.__value = self.getValue()

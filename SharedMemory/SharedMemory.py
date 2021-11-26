@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Nov 25 2021
+Last Modified: Fri Nov 26 2021
 Modified By: Zentetsu
 
 ----
@@ -38,6 +38,7 @@ HISTORY:
 2021-10-21	Zen	Adjusting close and restart methods
 2021-11-24	Zen	SharedMemory init size fixed
 2021-11-25	Zen	Changing Server behavior
+2021-11-26	Zen	Fix int and dict encoding
 '''
 
 from abc import ABC, abstractmethod
@@ -52,7 +53,7 @@ import os
 
 _SHM_NAME_PREFIX = '/psm_'
 _MODE = 0o600
-_FLAG = posix_ipc.O_CREX
+_FLAG = posix_ipc.O_CREX | os.O_RDWR
 
 _BEGIN = 0xAA
 _END = 0xBB
@@ -180,12 +181,12 @@ class SharedMemory:
         if not self.__checkValue(type(value)):
             raise SMTypeError()
 
-        __data = self.__encoding(value)
+        _data = self.__encoding(value)
+
+        _packed = struct.pack('<%dI' % len(_data), *_data)
 
         self.__mapfile.seek(0)
-
-        for d in __data:
-            self.__mapfile.write_byte(d)
+        self.__mapfile.write(_packed)
 
         return True
 
@@ -203,32 +204,33 @@ class SharedMemory:
 
             return None
 
-        encoded_data = []
         self.__mapfile.seek(0)
 
-        encoded_data.append(self.__mapfile.read_byte())
-        if encoded_data[0] != _BEGIN:
+        _packed = self.__mapfile.read()
+        _encoded_data = list(struct.unpack('<%dI' % (len(_packed) // 4), _packed))
+        _res = len(_encoded_data) - 1 - _encoded_data[::-1].index(_END)
+        _encoded_data = _encoded_data[:_res+1]
+
+        if _encoded_data[0] != _BEGIN:
             raise SMEncoding("BEGIN")
 
-        encoded_data.append(self.__mapfile.read_byte())
-
-        if encoded_data[1] == _CLOSED:
+        if _encoded_data[1] == _CLOSED:
             raise SMEncoding("CLOSED")
+        elif _encoded_data[1] == _DICT:
+            nb_element = [self.__decoding(_encoded_data[2:_encoded_data[3]+4])][0]
+            _encoded_data = _encoded_data[:nb_element+5+_encoded_data[3]]
+        else:
+            nb_element = _encoded_data[2]
+            _encoded_data = _encoded_data[:nb_element+4]
 
-        encoded_data.append(self.__mapfile.read_byte())
-
-        for _ in range(0, encoded_data[2]):
-            encoded_data.append(self.__mapfile.read_byte())
-
-        encoded_data.append(self.__mapfile.read_byte())
-        if encoded_data[len(encoded_data)-1] != _END:
+        if _encoded_data[len(_encoded_data)-1] != _END:
             raise SMEncoding("END")
 
-        decoded_data = self.__decoding(encoded_data[1:len(encoded_data)-1])
+        _decoded_data = self.__decoding(_encoded_data[1:len(_encoded_data)-1])
 
-        self.__value == decoded_data
+        self.__value == _decoded_data
 
-        return decoded_data
+        return _decoded_data
 
     def getType(self):
         """Method that returns data type
@@ -251,14 +253,14 @@ class SharedMemory:
                 return False
 
         try:
-            encoded_data = []
+            _encoded_data = []
             self.__mapfile.seek(0)
 
-            encoded_data.append(self.__mapfile.read_byte())
-            encoded_data.append(self.__mapfile.read_byte())
-            encoded_data.append(self.__mapfile.read_byte())
+            _encoded_data.append(self.__mapfile.read_byte())
+            _encoded_data.append(self.__mapfile.read_byte())
+            _encoded_data.append(self.__mapfile.read_byte())
 
-            return encoded_data != [_BEGIN, _CLOSED, _END]
+            return _encoded_data != [_BEGIN, _CLOSED, _END]
         except:
             return False
 
@@ -274,14 +276,14 @@ class SharedMemory:
 
             raise TypeError("Data type must be dict.")
 
-        file = open(path, 'w+')
-        json.dump(self.getValue(), file)
-        file.close()
+        _file = open(path, 'w+')
+        json.dump(self.getValue(), _file)
+        _file.close()
 
     def __initSharedMemory(self):
         """Method to initialize the shared space
         """
-        self.__size = sys.getsizeof(self.__value)
+        self.__size = sys.getsizeof(self.__encoding(self.__value))
         self.__memory = None
         self.__mapfile = None
 
@@ -338,71 +340,93 @@ class SharedMemory:
         Args:
             value ([type]): data to encode
         """
-        data = [_BEGIN]
+        _data = [_BEGIN]
 
-        if type(value) == int or type(value) == float:
-            if type(value) == float:
-                value = int("0b" + self.__convertFloat2Bin(value), 2)
-                data.append(_FLOAT)
-            else:
-                data.append(_INT)
+        if type(value) == int:
+            value = int("0b" + self.__convertIF2Bin(value, int), 2)
+            _data.append(_INT)
 
-            data.append(8)
-            data.append((0xFF00000000000000 & value) >> 56)
-            data.append((0xFF000000000000 & value) >> 48)
-            data.append((0xFF0000000000 & value) >> 40)
-            data.append((0xFF00000000 & value) >> 32)
-            data.append((0xFF000000 & value) >> 24)
-            data.append((0xFF0000 & value) >> 16)
-            data.append((0xFF00 & value) >> 8)
-            data.append((0xFF & value) >> 0)
+            # nb = -(-value.bit_length() // 8)
+            # if value == 0:
+            #     nb = 1
+            # dec = 0xFF << (8 * (nb-1))
+
+            # _data.append(nb)
+
+            # for i in range(nb-1, -1, -1):
+            #     _data.append((dec & value) >> i*8)
+            #     dec = dec >> 8
+
+            _data.append(8)
+            _data.append((0xFF00000000000000 & value) >> 56)
+            _data.append((0xFF000000000000 & value) >> 48)
+            _data.append((0xFF0000000000 & value) >> 40)
+            _data.append((0xFF00000000 & value) >> 32)
+            _data.append((0xFF000000 & value) >> 24)
+            _data.append((0xFF0000 & value) >> 16)
+            _data.append((0xFF00 & value) >> 8)
+            _data.append((0xFF & value) >> 0)
+
+        if type(value) == float:
+            value = int("0b" + self.__convertIF2Bin(value, float), 2)
+            _data.append(_FLOAT)
+
+            _data.append(8)
+            _data.append((0xFF00000000000000 & value) >> 56)
+            _data.append((0xFF000000000000 & value) >> 48)
+            _data.append((0xFF0000000000 & value) >> 40)
+            _data.append((0xFF00000000 & value) >> 32)
+            _data.append((0xFF000000 & value) >> 24)
+            _data.append((0xFF0000 & value) >> 16)
+            _data.append((0xFF00 & value) >> 8)
+            _data.append((0xFF & value) >> 0)
 
         elif type(value) == bool:
-            data.append(_BOOL)
-            data.append(1)
-            data.append(0xFF & value)
+            _data.append(_BOOL)
+            _data.append(1)
+            _data.append(0xFF & value)
 
         elif type(value) == str:
-            data.append(_STR)
-            data.append(9)
+            _data.append(_STR)
+            _data.append(9)
 
             str_encoded = int(value.encode('utf-8').hex(), 16)
-            data.append((0xFF0000000000000000 & str_encoded) >> 64)
-            data.append((0xFF00000000000000 & str_encoded) >> 56)
-            data.append((0xFF000000000000 & str_encoded) >> 48)
-            data.append((0xFF0000000000 & str_encoded) >> 40)
-            data.append((0xFF00000000 & str_encoded) >> 32)
-            data.append((0xFF000000 & str_encoded) >> 24)
-            data.append((0xFF0000 & str_encoded) >> 16)
-            data.append((0xFF00 & str_encoded) >> 8)
-            data.append((0xFF & str_encoded) >> 0)
+
+            _data.append((0xFF0000000000000000 & str_encoded) >> 64)
+            _data.append((0xFF00000000000000 & str_encoded) >> 56)
+            _data.append((0xFF000000000000 & str_encoded) >> 48)
+            _data.append((0xFF0000000000 & str_encoded) >> 40)
+            _data.append((0xFF00000000 & str_encoded) >> 32)
+            _data.append((0xFF000000 & str_encoded) >> 24)
+            _data.append((0xFF0000 & str_encoded) >> 16)
+            _data.append((0xFF00 & str_encoded) >> 8)
+            _data.append((0xFF & str_encoded) >> 0)
 
         elif type(value) == list or type(value) == tuple:
             if type(value) == list:
-                data.append(_LIST)
+                _data.append(_LIST)
             else:
-                data.append(_TUPLE)
+                _data.append(_TUPLE)
 
-            data.append(0)
+            _data.append(0)
 
             for i in value:
-                data.extend(self.__encoding(i)[1:-1])
+                _data.extend(self.__encoding(i)[1:-1])
 
-            data[2] = len(data) - 3
+            _data[2] = len(_data) - 3
 
         elif type(value) == dict:
-            data.append(_DICT)
-            data.append(0)
+            _data.append(_DICT)
 
             for k in value:
-                data.extend(self.__encoding(k)[1:-1])
-                data.extend(self.__encoding(value[k])[1:-1])
+                _data.extend(self.__encoding(k)[1:-1])
+                _data.extend(self.__encoding(value[k])[1:-1])
 
-            data[2] = len(data) - 3
+            _data[2:2] = self.__encoding(len(_data) - 2)[1:-1]
 
-        data.append(_END)
+        _data.append(_END)
 
-        return data
+        return _data
 
     def __decoding(self, value):
         """Method to decode value
@@ -410,10 +434,11 @@ class SharedMemory:
         Args:
             value ([type]): data to decode
         """
-        d_data = 0
+        if value[0] == _INT:
+        #     for i in range(0, value[1]):
+        #         _d_data = _d_data + (value[i+2] << 8 * (value[1]-i-1))
 
-        if value[0] == _INT or value[0] == _FLOAT:
-            d_data = (value[2] << 56) + \
+            _d_data = (value[2] << 56) + \
                      (value[3] << 48) + \
                      (value[4] << 40) + \
                      (value[5] << 32) + \
@@ -422,15 +447,26 @@ class SharedMemory:
                      (value[8] << 8) + \
                      (value[9] << 0)
 
-            if value[0] == _FLOAT:
-                d_data = self.__convertBin2Float(bin(d_data))
+            _d_data = self.__convertBin2IF(bin(_d_data), int)
+
+        if value[0] == _FLOAT:
+            _d_data = (value[2] << 56) + \
+                     (value[3] << 48) + \
+                     (value[4] << 40) + \
+                     (value[5] << 32) + \
+                     (value[6] << 24) + \
+                     (value[7] << 16) + \
+                     (value[8] << 8) + \
+                     (value[9] << 0)
+
+            _d_data = self.__convertBin2IF(bin(_d_data), float)
 
         elif value[0] == _BOOL:
 
-            d_data = bool(value[2])
+            _d_data = bool(value[2])
 
         elif value[0] == _STR:
-            d_data = (value[2] << 64) + \
+            _d_data = (value[2] << 64) + \
                      (value[3] << 56) + \
                      (value[4] << 48) + \
                      (value[5] << 40) + \
@@ -439,57 +475,70 @@ class SharedMemory:
                      (value[8] << 16) + \
                      (value[9] << 8) + \
                      (value[10] << 0)
-            d_data = bytearray.fromhex(hex(d_data)[2:]).decode()
+            _d_data = bytearray.fromhex(hex(_d_data)[2:]).decode()
 
         elif value[0] == _LIST or value[0] == _TUPLE:
             value = value[2:]
-            d_data = []
+            _d_data = []
             c_type = value[0]
 
             while len(value) != 0:
                 new_data = value[:2+value[1]]
                 value = value[2+value[1]:]
-                d_data.append(self.__decoding(new_data))
+                _d_data.append(self.__decoding(new_data))
 
             if c_type == _TUPLE:
-                d_data = tuple(d_data)
+                _d_data = tuple(_d_data)
 
         elif value[0] == _DICT:
-            value = value[2:]
-            d_data = {}
+            nb_value = value[1:value[2]+3]
+            nb_value = self.__decoding(nb_value)
+            value = value[value[2]+3:value[2]+3+nb_value]
+            _d_data = {}
 
             while len(value) != 0:
-                new_key = value[:2+value[1]]
-                value = value[2+value[1]:]
-                new_data = value[:2+value[1]]
-                value = value[2+value[1]:]
-                d_data[self.__decoding(new_key)] = self.__decoding(new_data)
+                new_key = value[:value[1]+2]
+                value = value[value[1]+2:]
 
-        return d_data
+                if value[0] == 6:
+                    nb_value = self.__decoding(value[1:value[2]+3])
+                    new_data = value[:nb_value+value[2]+3]
+                    value = value[nb_value+value[2]+3:]
+                else:
+                    new_data = value[:2+value[1]]
+                    value = value[2+value[1]:]
 
-    def __convertBin2Float(self, value:int) -> float:
-        """Method to convert value to float
+                _d_data[self.__decoding(new_key)] = self.__decoding(new_data)
+
+        return _d_data
+
+    def __convertBin2IF(self, value:int, type:type) -> float:
+        """Method to convert value to int or float
 
         Args:
             value (int): data to convert
 
         Returns:
-            float: data converted
+            data converted
         """
-        h = int(value, 2).to_bytes(8, byteorder="big")
+        if type is int:
+            return struct.unpack('>i', int(value, 2).to_bytes(4, byteorder="big"))[0]
 
-        return struct.unpack('>d', h)[0]
+        return struct.unpack('>d', int(value, 2).to_bytes(8, byteorder="big"))[0]
 
-    def __convertFloat2Bin(self, value:float) -> int:
+    def __convertIF2Bin(self, value, type: type) -> int:
         """Method to convert value to bin
 
         Args:
-            value (float): data to convert
+            value: data to convert
 
         Returns:
             int: data converted
         """
-        [d] = struct.unpack(">Q", struct.pack(">d", value))
+        if type is int:
+            [d] = struct.unpack(">L", struct.pack(">i", value))
+        else:
+            [d] = struct.unpack(">Q", struct.pack(">d", value))
 
         return f'{d:064b}'
 
@@ -502,11 +551,11 @@ class SharedMemory:
         Returns:
             dict: return  data from JSON file
         """
-        json_file = open(path)
-        value = json.load(json_file)
-        json_file.close()
+        _json_file = open(path)
+        _value = json.load(_json_file)
+        _json_file.close()
 
-        return value
+        return _value
 
     def __writeLog(self, log_id:int, message:str):
         """Write information into a log file
@@ -670,11 +719,11 @@ class SharedMemory:
         Returns:
             str: printable value of Client Class instance
         """
-        s = "Client: " + str(self.__name) + "\n"\
+        _s = "Client: " + str(self.__name) + "\n"\
             + "\tAvailable: " + self.getAvailability().__repr__() + "\n"\
             + "\tValue: " + self.__value.__repr__()
 
-        return s
+        return _s
 
     @staticmethod
     def getSharedMemorySpace():

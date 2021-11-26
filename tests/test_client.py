@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Nov 25 2021
+Last Modified: Fri Nov 26 2021
 Modified By: Zentetsu
 
 ----
@@ -64,11 +64,11 @@ def test_int():
     print("Create Client instance containing an \"int\":", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test27", 1, log='./test_client.log', client=True)
+        c = SharedMemory("test27", -125, log='./test_client.log', client=True)
         res1 = type(c.getValue()) is int
         res2 = type(c[0]) is int
-        res3 = c.getValue() == 1
-        res4 = c[0] == 1
+        res3 = c.getValue() == -125
+        res4 = c[0] == -125
         c.close()
         assert res1 and res2 and res3 and res4
         print("SUCCESSED")
@@ -80,11 +80,11 @@ def test_float():
     print("Create Client instance containing a \"float\":", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test31", 1.2, log='./test_client.log', client=True)
+        c = SharedMemory("test31", -1.2, log='./test_client.log', client=True)
         res1 = type(c.getValue()) is float
         res2 = type(c[0]) is float
-        res3 = c.getValue() == 1.2
-        res4 = c[0] == 1.2
+        res3 = c.getValue() == -1.2
+        res4 = c[0] == -1.2
         c.close()
         assert res1 and res2 and res3 and res4
         print("SUCCESSED")

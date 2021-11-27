@@ -48,6 +48,7 @@ from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, 
 import posix_ipc
 import logging
 import struct
+import time
 import json
 import mmap
 import sys
@@ -76,7 +77,7 @@ _NPARRAY = 0x8
 class SharedMemory:
     """Shared Memory class
     """
-    def __init__(self, name:str, value=None, path:str=None, size:int=8, client:bool=False, log:str=None):
+    def __init__(self, name:str, value=None, path:str=None, size:int=8, client:bool=False, log:str=None, sleep:float=0.05):
         """Class constructor
 
         Args:
@@ -112,6 +113,7 @@ class SharedMemory:
         self.__name_semaphore = _SEM_NAME_PREFIX + name
         self.__type = type(self.__value)
         self.__client = client
+        self.__sleep = sleep
 
         self.__initSharedMemory()
 
@@ -201,6 +203,8 @@ class SharedMemory:
 
         self.__semaphore.release()
 
+        time.sleep(self.__sleep)
+
         return True
 
     def getValue(self):
@@ -229,6 +233,8 @@ class SharedMemory:
             self.__semaphore.release()
         except:
             return None
+
+        time.sleep(self.__sleep)
 
         if _encoded_data[0] != _BEGIN:
             raise SMEncoding("BEGIN")

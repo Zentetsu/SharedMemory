@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Fri Nov 26 2021
+Last Modified: Sat Nov 27 2021
 Modified By: Zentetsu
 
 ----
@@ -39,6 +39,7 @@ HISTORY:
 2021-11-24	Zen	SharedMemory init size fixed
 2021-11-25	Zen	Changing Server behavior
 2021-11-26	Zen	Fix int and dict encoding
+2021-11-27	Zen	Fix getValue behavior
 '''
 
 from abc import ABC, abstractmethod
@@ -204,12 +205,14 @@ class SharedMemory:
 
             return None
 
-        self.__mapfile.seek(0)
-
-        _packed = self.__mapfile.read()
-        _encoded_data = list(struct.unpack('<%dI' % (len(_packed) // 4), _packed))
-        _res = len(_encoded_data) - 1 - _encoded_data[::-1].index(_END)
-        _encoded_data = _encoded_data[:_res+1]
+        try:
+            self.__mapfile.seek(0)
+            _packed = self.__mapfile.read()
+            _encoded_data = list(struct.unpack('<%dI' % (len(_packed) // 4), _packed))
+            _res = len(_encoded_data) - 1 - _encoded_data[::-1].index(_END)
+            _encoded_data = _encoded_data[:_res+1]
+        except:
+            return None
 
         if _encoded_data[0] != _BEGIN:
             raise SMEncoding("BEGIN")

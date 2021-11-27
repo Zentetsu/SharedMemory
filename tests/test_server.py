@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Nov 25 2021
+Last Modified: Sat Nov 27 2021
 Modified By: Zentetsu
 
 ----
@@ -51,7 +51,8 @@ def test_connection():
     try:
         # with contextlib.redirect_stdout(None):
         s = SharedMemory("test1", log="./test_server.log", client=False)
-        # s.close()
+        s.getValue()
+        s.close()
         assert True
         print("SUCCESSED")
     except:

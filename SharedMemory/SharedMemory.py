@@ -40,6 +40,7 @@ HISTORY:
 2021-11-25	Zen	Changing Server behavior
 2021-11-26	Zen	Fix int and dict encoding
 2021-11-27	Zen	Fix getValue behavior
+2021-11-27	Zen	Adding semaphore
 '''
 
 from abc import ABC, abstractmethod
@@ -53,6 +54,8 @@ import sys
 import os
 
 _SHM_NAME_PREFIX = '/psm_'
+_SEM_NAME_PREFIX = '/sem_'
+
 _MODE = 0o600
 _FLAG = posix_ipc.O_CREX | os.O_RDWR
 
@@ -105,7 +108,8 @@ class SharedMemory:
             self.__value = value
             self.__size = size
 
-        self.__name = _SHM_NAME_PREFIX + name
+        self.__name_memory = _SHM_NAME_PREFIX + name
+        self.__name_semaphore = _SEM_NAME_PREFIX + name
         self.__type = type(self.__value)
         self.__client = client
 
@@ -155,12 +159,16 @@ class SharedMemory:
 
         if self.__memory is not None:
             try:
-                posix_ipc.unlink_shared_memory(self.__name)
+                posix_ipc.unlink_shared_memory(self.__name_memory)
+
+                self.__semaphore.release()
+                self.__semaphore.unlink()
             except:
                 if self.__log:
                     self.__writeLog(0, "SharedMemory already closed.")
 
             self.__memory = None
+            self.__semaphore = None
 
     def setValue(self, value) -> bool:
         """Method to set the shared value
@@ -186,8 +194,12 @@ class SharedMemory:
 
         _packed = struct.pack('<%dI' % len(_data), *_data)
 
+        self.__semaphore.acquire()
+
         self.__mapfile.seek(0)
         self.__mapfile.write(_packed)
+
+        self.__semaphore.release()
 
         return True
 
@@ -206,11 +218,15 @@ class SharedMemory:
             return None
 
         try:
+            self.__semaphore.acquire()
+
             self.__mapfile.seek(0)
             _packed = self.__mapfile.read()
             _encoded_data = list(struct.unpack('<%dI' % (len(_packed) // 4), _packed))
             _res = len(_encoded_data) - 1 - _encoded_data[::-1].index(_END)
             _encoded_data = _encoded_data[:_res+1]
+
+            self.__semaphore.release()
         except:
             return None
 
@@ -288,21 +304,27 @@ class SharedMemory:
         """
         self.__size = sys.getsizeof(self.__encoding(self.__value))
         self.__memory = None
+        self.__semaphore = None
         self.__mapfile = None
 
         if self.__client:
             try:
-                self.__memory = posix_ipc.SharedMemory(self.__name, _FLAG, _MODE)
+                self.__memory = posix_ipc.SharedMemory(self.__name_memory, _FLAG, _MODE)
+                self.__semaphore = posix_ipc.Semaphore(self.__name_semaphore, _FLAG, _MODE)
                 os.ftruncate(self.__memory.fd, self.__size)
             except posix_ipc.ExistentialError:
                 if self.__value is not None:
-                    self.__memory = posix_ipc.SharedMemory(self.__name)
+                    self.__memory = posix_ipc.SharedMemory(self.__name_memory)
+                    self.__semaphore = posix_ipc.Semaphore(self.__name_semaphore)
                 else:
                     self.close()
-                    raise SMAlreadyExist(self.__name)
+                    raise SMAlreadyExist(self.__name_memory)
+
+            self.__semaphore.release()
         else:
             try:
-                self.__memory = posix_ipc.SharedMemory(self.__name)
+                self.__memory = posix_ipc.SharedMemory(self.__name_memory)
+                self.__semaphore = posix_ipc.Semaphore(self.__name_semaphore)
                 self.__size = self.__memory.size
             except posix_ipc.ExistentialError:
                 if self.__log is not None:
@@ -722,7 +744,7 @@ class SharedMemory:
         Returns:
             str: printable value of Client Class instance
         """
-        _s = "Client: " + str(self.__name) + "\n"\
+        _s = "Client: " + str(self.__name_memory) + "\n"\
             + "\tAvailable: " + self.getAvailability().__repr__() + "\n"\
             + "\tValue: " + self.__value.__repr__()
 

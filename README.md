@@ -8,10 +8,10 @@ Python shared memory library based an posix-ipc.
     * list, tuple and dict
 * Management of the availability of shared memory space
 * Overloaded methods for list and dict
+* Semaphore
 
 ### Future improvement
-* Mutex
-* Timeout for Mutex
+* Timeout for Semaphore
 * Adding nparray support
 * Adding more tests
 

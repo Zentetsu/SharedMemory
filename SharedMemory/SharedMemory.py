@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sat Nov 27 2021
+Last Modified: Thu Dec 16 2021
 Modified By: Zentetsu
 
 ----
@@ -77,7 +77,7 @@ _NPARRAY = 0x8
 class SharedMemory:
     """Shared Memory class
     """
-    def __init__(self, name:str, value=None, path:str=None, size:int=8, client:bool=False, log:str=None, sleep:float=0.05):
+    def __init__(self, name:str, value=None, path:str=None, size:int=8, client:bool=False, log:str=None, sleep:float=0):
         """Class constructor
 
         Args:
@@ -92,6 +92,10 @@ class SharedMemory:
             SMMultiInputError: raise an error when value and path are both at None or initialized
         """
         self.__log = log
+
+        if self.__log is not None:
+            f = open(os.devnull, 'w')
+            sys.stdout = f
 
         if client and (value is None and path is None or value is not None and path is not None):
             if self.__log is not None:
@@ -181,6 +185,8 @@ class SharedMemory:
         Returns:
             bool: return if value has been updated
         """
+        self.__semaphore.acquire(self.__sleep)
+
         if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
@@ -195,8 +201,6 @@ class SharedMemory:
         _data = self.__encoding(value)
 
         _packed = struct.pack('<%dI' % len(_data), *_data)
-
-        self.__semaphore.acquire()
 
         self.__mapfile.seek(0)
         self.__mapfile.write(_packed)
@@ -222,15 +226,11 @@ class SharedMemory:
             return None
 
         try:
-            self.__semaphore.acquire()
-
             self.__mapfile.seek(0)
             _packed = self.__mapfile.read()
             _encoded_data = list(struct.unpack('<%dI' % (len(_packed) // 4), _packed))
             _res = len(_encoded_data) - 1 - _encoded_data[::-1].index(_END)
             _encoded_data = _encoded_data[:_res+1]
-
-            self.__semaphore.release()
         except:
             return None
 

@@ -23,7 +23,7 @@ Example of execution in two instances of ipython.
 In [1]: from SharedMemory import SharedMemory
 
 In [2]: # Creating client instance with a shared space named 'shared_space' with a size of 10
-   ...: C = SharedMemory(name="shared_space", value="Hello", exist=False)
+   ...: C = SharedMemory(name="shared_space", value="Hello", client=True)
 
 In [4]: C.getAvailability()
 Out[4]: True
@@ -53,7 +53,7 @@ Out[11]: False
 In [1]: from SharedMemory import SharedMemory
 
 In [2]: # Creating server instance access to the shared named 'shared_space'
-   ...: S = SharedMemory(name="shared_space", exist=True)
+   ...: S = SharedMemory(name="shared_space", client=False)
 
 In [4]: S.getAvailability()
 Out[4]: True

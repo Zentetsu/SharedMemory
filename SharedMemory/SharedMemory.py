@@ -41,7 +41,7 @@ HISTORY:
 2021-11-26	Zen	Fix int and dict encoding
 2021-11-27	Zen	Fix getValue behavior
 2021-11-27	Zen	Adding semaphore
-2023-03-06	Zen	Correcting mutex behavior
+2023-03-06	Zen	Correcting mutex behavior + Fixing mutex bug
 '''
 
 from abc import ABC, abstractmethod
@@ -185,16 +185,15 @@ class SharedMemory:
         Returns:
             bool: return if value has been updated
         """
-        if not mutex:
-            self.__semaphore.acquire()
-
-        if not self.getAvailability():
+        if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
             else:
                 print("ERROR: Shared Memory space doesn't exist.")
 
-            return False
+            return None
+        elif not mutex:
+            self.__semaphore.acquire()
 
         if not self.__checkValue(type(value)):
             raise SMTypeError()
@@ -217,16 +216,15 @@ class SharedMemory:
         Returns:
             [type]: return data from the shared space
         """
-        if not mutex:
-            self.__semaphore.acquire()
-
-        if not self.getAvailability():
+        if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
             else:
                 print("ERROR: Shared Memory space doesn't exist.")
 
             return None
+        elif not mutex:
+            self.__semaphore.acquire()
 
         try:
             self.__mapfile.seek(0)
@@ -615,15 +613,15 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
-        self.__semaphore.acquire()
-
-        if not self.getAvailability():
+        if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
             else:
                 print("ERROR: Shared Memory space doesn't exist.")
 
             return None
+        else:
+            self.__semaphore.acquire()
 
         self.__value = self.getValue(mutex=True)
 
@@ -649,15 +647,15 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
-        self.__semaphore.acquire()
-
-        if not self.getAvailability():
+        if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
             else:
                 print("ERROR: Shared Memory space doesn't exist.")
 
             return None
+        else:
+            self.__semaphore.acquire()
 
         if self.__type == list:
             if self.__log is not None:
@@ -695,15 +693,15 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
-        self.__semaphore.acquire()
-
-        if not self.getAvailability():
+        if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
             else:
                 print("ERROR: Shared Memory space doesn't exist.")
 
             return None
+        else:
+            self.__semaphore.acquire()
 
         self.__value = self.getValue(mutex=True)
 
@@ -723,15 +721,15 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
-        self.__semaphore.acquire()
-
-        if not self.getAvailability():
+        if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
             else:
                 print("ERROR: Shared Memory space doesn't exist.")
 
             return None
+        else:
+            self.__semaphore.acquire()
 
         self.__value = self.getValue(mutex=True)
 
@@ -748,15 +746,15 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
-        self.__semaphore.acquire()
-
-        if not self.getAvailability():
+        if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
             else:
                 print("ERROR: Shared Memory space doesn't exist.")
 
             return None
+        else:
+            self.__semaphore.acquire()
 
         self.__value = self.getValue(mutex=True)
 

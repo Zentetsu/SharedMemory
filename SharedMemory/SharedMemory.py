@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Dec 16 2021
+Last Modified: Mon Mar 06 2023
 Modified By: Zentetsu
 
 ----
@@ -41,6 +41,7 @@ HISTORY:
 2021-11-26	Zen	Fix int and dict encoding
 2021-11-27	Zen	Fix getValue behavior
 2021-11-27	Zen	Adding semaphore
+2023-03-06	Zen	Correcting mutex behavior
 '''
 
 from abc import ABC, abstractmethod
@@ -48,7 +49,6 @@ from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, 
 import posix_ipc
 import logging
 import struct
-import time
 import json
 import mmap
 import sys
@@ -77,7 +77,7 @@ _NPARRAY = 0x8
 class SharedMemory:
     """Shared Memory class
     """
-    def __init__(self, name:str, value=None, path:str=None, size:int=8, client:bool=False, log:str=None, sleep:float=0):
+    def __init__(self, name:str, value=None, path:str=None, size:int=8, client:bool=False, log:str=None):
         """Class constructor
 
         Args:
@@ -86,7 +86,6 @@ class SharedMemory:
             path (str, optional): path to load JSON file and sharing data inside. Defaults to None.
             size (int, optional): size of the shared space or str value. Defaults to 10.
             client (bool, optional): will creat a client or server instance
-            timeout (int, optional): mutex timeout. Defaults to 1.
 
         Raises:
             SMMultiInputError: raise an error when value and path are both at None or initialized
@@ -117,7 +116,6 @@ class SharedMemory:
         self.__name_semaphore = _SEM_NAME_PREFIX + name
         self.__type = type(self.__value)
         self.__client = client
-        self.__sleep = sleep
 
         self.__initSharedMemory()
 
@@ -153,6 +151,8 @@ class SharedMemory:
 
             return
 
+        self.__semaphore.acquire()
+
         if self.__mapfile is not None:
             self.__mapfile.seek(0)
 
@@ -176,7 +176,7 @@ class SharedMemory:
             self.__memory = None
             self.__semaphore = None
 
-    def setValue(self, value) -> bool:
+    def setValue(self, value, mutex=False) -> bool:
         """Method to set the shared value
 
         Args:
@@ -185,7 +185,8 @@ class SharedMemory:
         Returns:
             bool: return if value has been updated
         """
-        self.__semaphore.acquire(self.__sleep)
+        if not mutex:
+            self.__semaphore.acquire()
 
         if not self.getAvailability():
             if self.__log is not None:
@@ -205,18 +206,20 @@ class SharedMemory:
         self.__mapfile.seek(0)
         self.__mapfile.write(_packed)
 
-        self.__semaphore.release()
-
-        time.sleep(self.__sleep)
+        if not mutex:
+            self.__semaphore.release()
 
         return True
 
-    def getValue(self):
+    def getValue(self, mutex=False):
         """Method to return the shared value
 
         Returns:
             [type]: return data from the shared space
         """
+        if not mutex:
+            self.__semaphore.acquire()
+
         if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
@@ -233,8 +236,6 @@ class SharedMemory:
             _encoded_data = _encoded_data[:_res+1]
         except:
             return None
-
-        time.sleep(self.__sleep)
 
         if _encoded_data[0] != _BEGIN:
             raise SMEncoding("BEGIN")
@@ -254,6 +255,9 @@ class SharedMemory:
         _decoded_data = self.__decoding(_encoded_data[1:len(_encoded_data)-1])
 
         self.__value == _decoded_data
+
+        if not mutex:
+            self.__semaphore.release()
 
         return _decoded_data
 
@@ -316,7 +320,7 @@ class SharedMemory:
         if self.__client:
             try:
                 self.__memory = posix_ipc.SharedMemory(self.__name_memory, _FLAG, _MODE)
-                self.__semaphore = posix_ipc.Semaphore(self.__name_semaphore, _FLAG, _MODE)
+                self.__semaphore = posix_ipc.Semaphore(self.__name_semaphore, _FLAG, _MODE, initial_value=1)
                 os.ftruncate(self.__memory.fd, self.__size)
             except posix_ipc.ExistentialError:
                 if self.__value is not None:
@@ -325,8 +329,6 @@ class SharedMemory:
                 else:
                     self.close()
                     raise SMAlreadyExist(self.__name_memory)
-
-            self.__semaphore.release()
         else:
             try:
                 self.__memory = posix_ipc.SharedMemory(self.__name_memory)
@@ -613,6 +615,8 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
+        self.__semaphore.acquire()
+
         if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
@@ -621,7 +625,9 @@ class SharedMemory:
 
             return None
 
-        self.__value = self.getValue()
+        self.__value = self.getValue(mutex=True)
+
+        self.__semaphore.release()
 
         if self.__type == dict:
             if type(key) is int:
@@ -643,6 +649,8 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
+        self.__semaphore.acquire()
+
         if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
@@ -657,7 +665,7 @@ class SharedMemory:
 
             raise TypeError("Data shared type is list not dict.")
 
-        self.__value = self.getValue()
+        self.__value = self.getValue(mutex=True)
 
         if type(key) is int:
             key = str(key)
@@ -674,7 +682,9 @@ class SharedMemory:
         if sys.getsizeof(self.__value) > self.__size:
             raise SMSizeError
 
-        self.setValue(self.__value)
+        self.setValue(self.__value, mutex=True)
+
+        self.__semaphore.release()
 
     def __len__(self) -> int:
         """Method that returns the size of the shared data
@@ -685,6 +695,8 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
+        self.__semaphore.acquire()
+
         if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
@@ -693,7 +705,9 @@ class SharedMemory:
 
             return None
 
-        self.__value = self.getValue()
+        self.__value = self.getValue(mutex=True)
+
+        self.__semaphore.release()
 
         return self.__value.__len__()
 
@@ -709,6 +723,8 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
+        self.__semaphore.acquire()
+
         if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
@@ -717,7 +733,9 @@ class SharedMemory:
 
             return None
 
-        self.__value = self.getValue()
+        self.__value = self.getValue(mutex=True)
+
+        self.__semaphore.release()
 
         return self.__value.__contains__(key)
 
@@ -730,6 +748,8 @@ class SharedMemory:
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
+        self.__semaphore.acquire()
+
         if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
@@ -738,11 +758,13 @@ class SharedMemory:
 
             return None
 
-        self.__value = self.getValue()
+        self.__value = self.getValue(mutex=True)
 
         self.__value.__delitem__(key)
 
-        self.setValue(self.__value)
+        self.setValue(self.__value, mutex=True)
+
+        self.__semaphore.release()
 
     def __repr__(self):
         """Redefined method to print value of the Client Class instance

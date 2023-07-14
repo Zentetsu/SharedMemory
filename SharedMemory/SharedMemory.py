@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Mon Mar 06 2023
+Last Modified: Fri Jul 14 2023
 Modified By: Zentetsu
 
 ----
@@ -42,13 +42,16 @@ HISTORY:
 2021-11-27	Zen	Fix getValue behavior
 2021-11-27	Zen	Adding semaphore
 2023-03-06	Zen	Correcting mutex behavior + Fixing mutex bug
+2023-03-06	Zen	Adding support for numpy array and complex number
 '''
 
 from abc import ABC, abstractmethod
 from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, SMAlreadyExist, SMEncoding
 import posix_ipc
+import binascii
 import logging
 import struct
+import numpy
 import json
 import mmap
 import sys
@@ -60,19 +63,19 @@ _SEM_NAME_PREFIX = '/sem_'
 _MODE = 0o600
 _FLAG = posix_ipc.O_CREX | os.O_RDWR
 
-_BEGIN = 0xAA
-_END = 0xBB
-_CLOSED = 0xAB
+_BEGIN      = 0xAA
+_END        = 0xBB
+_CLOSED     = 0xAB
 
-_INT = 0x0
-_FLOAT = 0x1
-_BOOL = 0x2
-_COMPLEX = 0x3
-_STR = 0x4
-_LIST = 0x5
-_DICT = 0x6
-_TUPLE = 0x7
-_NPARRAY = 0x8
+_INT        = 0x00
+_FLOAT      = 0x01
+_BOOL       = 0x02
+_COMPLEX    = 0x03
+_STR        = 0x04
+_LIST       = 0x05
+_DICT       = 0x06
+_TUPLE      = 0x07
+_NPARRAY    = 0x08
 
 class SharedMemory:
     """Shared Memory class
@@ -373,7 +376,7 @@ class SharedMemory:
         """
         _data = [_BEGIN]
 
-        if type(value) == int:
+        if type(value) == int or type(value) == numpy.int64:
             value = int("0b" + self.__convertIF2Bin(value, int), 2)
             _data.append(_INT)
 
@@ -398,7 +401,7 @@ class SharedMemory:
             _data.append((0xFF00 & value) >> 8)
             _data.append((0xFF & value) >> 0)
 
-        if type(value) == float:
+        elif type(value) == float or type(value) == numpy.float64:
             value = int("0b" + self.__convertIF2Bin(value, float), 2)
             _data.append(_FLOAT)
 
@@ -412,12 +415,21 @@ class SharedMemory:
             _data.append((0xFF00 & value) >> 8)
             _data.append((0xFF & value) >> 0)
 
-        elif type(value) == bool:
+        if type(value) == complex or type(value) == numpy.complex128:
+            _data.append(_COMPLEX)
+            _data.append(0)
+
+            _data.extend(self.__encoding(value.real)[1:-1])
+            _data.extend(self.__encoding(value.imag)[1:-1])
+
+            _data[2] = len(_data) - 3
+
+        elif type(value) == bool or type(value) == numpy.bool_:
             _data.append(_BOOL)
             _data.append(1)
             _data.append(0xFF & value)
 
-        elif type(value) == str:
+        elif type(value) == str or type(value) == numpy.str_:
             _data.append(_STR)
             _data.append(9)
 
@@ -455,6 +467,15 @@ class SharedMemory:
 
             _data[2:2] = self.__encoding(len(_data) - 2)[1:-1]
 
+        elif type(value) == numpy.ndarray:
+            _data.append(_NPARRAY)
+            _data.append(0)
+
+            for i in value:
+                _data.extend(self.__encoding(i)[1:-1])
+
+            _data[2] = len(_data) - 3
+
         _data.append(_END)
 
         return _data
@@ -480,7 +501,7 @@ class SharedMemory:
 
             _d_data = self.__convertBin2IF(bin(_d_data), int)
 
-        if value[0] == _FLOAT:
+        elif value[0] == _FLOAT:
             _d_data = (value[2] << 56) + \
                      (value[3] << 48) + \
                      (value[4] << 40) + \
@@ -491,6 +512,18 @@ class SharedMemory:
                      (value[9] << 0)
 
             _d_data = self.__convertBin2IF(bin(_d_data), float)
+
+        elif value[0] == _COMPLEX:
+            value = value[2:]
+            _d_data = []
+            c_type = value[0]
+
+            while len(value) != 0:
+                new_data = value[:2+value[1]]
+                value = value[2+value[1]:]
+                _d_data.append(self.__decoding(new_data))
+
+            _d_data = complex(_d_data[0], _d_data[1])
 
         elif value[0] == _BOOL:
 
@@ -506,6 +539,7 @@ class SharedMemory:
                      (value[8] << 16) + \
                      (value[9] << 8) + \
                      (value[10] << 0)
+
             _d_data = bytearray.fromhex(hex(_d_data)[2:]).decode()
 
         elif value[0] == _LIST or value[0] == _TUPLE:
@@ -540,6 +574,29 @@ class SharedMemory:
                     value = value[2+value[1]:]
 
                 _d_data[self.__decoding(new_key)] = self.__decoding(new_data)
+
+        elif value[0] == _NPARRAY:
+            value = value[2:]
+            _d_data = numpy.array([])
+            _type = None
+            _same = True
+
+            while len(value) != 0:
+                new_data = value[:2+value[1]]
+                value = value[2+value[1]:]
+
+                _d = self.__decoding(new_data)
+
+                if _type == None:
+                    _same = True
+                    _type = type(_d)
+                elif _type != type(_d):
+                    _same = False
+
+                _d_data = numpy.append(_d_data, _d)
+
+            if _same and _type == bool:
+                _d_data = _d_data.astype(dtype=bool)
 
         return _d_data
 

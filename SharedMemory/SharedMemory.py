@@ -42,13 +42,12 @@ HISTORY:
 2021-11-27	Zen	Fix getValue behavior
 2021-11-27	Zen	Adding semaphore
 2023-03-06	Zen	Correcting mutex behavior + Fixing mutex bug
-2023-03-06	Zen	Adding support for numpy array and complex number
+2023-07-14	Zen	Adding support for numpy array and complex number
 '''
 
 from abc import ABC, abstractmethod
 from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, SMAlreadyExist, SMEncoding
 import posix_ipc
-import binascii
 import logging
 import struct
 import numpy

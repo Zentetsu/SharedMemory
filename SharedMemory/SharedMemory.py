@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Fri Jul 14 2023
+Last Modified: Sun Aug 13 2023
 Modified By: Zentetsu
 
 ----
@@ -43,6 +43,8 @@ HISTORY:
 2021-11-27	Zen	Adding semaphore
 2023-03-06	Zen	Correcting mutex behavior + Fixing mutex bug
 2023-07-14	Zen	Adding support for numpy array and complex number
+2023-07-14	Zen	Fixing int conversion
+2023-08-13	Zen	Correcting numpy support
 '''
 
 from abc import ABC, abstractmethod
@@ -379,17 +381,6 @@ class SharedMemory:
             value = int("0b" + self.__convertIF2Bin(value, int), 2)
             _data.append(_INT)
 
-            # nb = -(-value.bit_length() // 8)
-            # if value == 0:
-            #     nb = 1
-            # dec = 0xFF << (8 * (nb-1))
-
-            # _data.append(nb)
-
-            # for i in range(nb-1, -1, -1):
-            #     _data.append((dec & value) >> i*8)
-            #     dec = dec >> 8
-
             _data.append(8)
             _data.append((0xFF00000000000000 & value) >> 56)
             _data.append((0xFF000000000000 & value) >> 48)
@@ -471,6 +462,9 @@ class SharedMemory:
             _data.append(0)
 
             for i in value:
+                if type(i) == numpy.ndarray:
+                    i = list(i)
+
                 _data.extend(self.__encoding(i)[1:-1])
 
             _data[2] = len(_data) - 3
@@ -576,7 +570,7 @@ class SharedMemory:
 
         elif value[0] == _NPARRAY:
             value = value[2:]
-            _d_data = numpy.array([])
+            _d_data = []
             _type = None
             _same = True
 
@@ -592,7 +586,9 @@ class SharedMemory:
                 elif _type != type(_d):
                     _same = False
 
-                _d_data = numpy.append(_d_data, _d)
+                _d_data.append(_d)
+
+            _d_data = numpy.array(_d_data)
 
             if _same and _type == bool:
                 _d_data = _d_data.astype(dtype=bool)
@@ -609,7 +605,7 @@ class SharedMemory:
             data converted
         """
         if type is int:
-            return struct.unpack('>i', int(value, 2).to_bytes(4, byteorder="big"))[0]
+            return struct.unpack('P', int(value, 2).to_bytes(8, byteorder="big"))[0]
 
         return struct.unpack('>d', int(value, 2).to_bytes(8, byteorder="big"))[0]
 
@@ -623,7 +619,7 @@ class SharedMemory:
             int: data converted
         """
         if type is int:
-            [d] = struct.unpack(">L", struct.pack(">i", value))
+            [d] = struct.unpack(">Q", struct.pack("P", value))
         else:
             [d] = struct.unpack(">Q", struct.pack(">d", value))
 

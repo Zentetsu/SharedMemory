@@ -5,7 +5,7 @@ Python shared memory library based an posix-ipc.
 ### Features
 * Shared type:
     * Basic type (int, float, bool, str)
-    * list, tuple and dict, nparray
+    * list, tuple, dict and nparray
 * Management of the availability of shared memory space
 * Overloaded methods for list and dict
 * Semaphore

@@ -44,7 +44,7 @@ HISTORY:
 2023-03-06	Zen	Correcting mutex behavior + Fixing mutex bug
 2023-07-14	Zen	Adding support for numpy array and complex number
 2023-07-14	Zen	Fixing int conversion
-2023-08-13	Zen	Correcting numpy support
+2023-08-13	Zen	Correcting numpy support + int conversion
 '''
 
 from abc import ABC, abstractmethod
@@ -605,7 +605,7 @@ class SharedMemory:
             data converted
         """
         if type is int:
-            return struct.unpack('P', int(value, 2).to_bytes(8, byteorder="big"))[0]
+            return struct.unpack('q', int(value, 2).to_bytes(8, byteorder="big"))[0]
 
         return struct.unpack('>d', int(value, 2).to_bytes(8, byteorder="big"))[0]
 

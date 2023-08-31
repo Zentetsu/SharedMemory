@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sun Aug 13 2023
+Last Modified: Thu Aug 31 2023
 Modified By: Zentetsu
 
 ----
@@ -45,6 +45,7 @@ HISTORY:
 2023-07-14	Zen	Adding support for numpy array and complex number
 2023-07-14	Zen	Fixing int conversion
 2023-08-13	Zen	Correcting numpy support + int conversion
+2023-08-31	Zen	Correcting setitem method
 '''
 
 from abc import ABC, abstractmethod
@@ -661,9 +662,6 @@ class SharedMemory:
 
         Args:
             key ([type]): key
-
-        Raises:
-            TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
         if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
@@ -695,9 +693,6 @@ class SharedMemory:
         Args:
             key (str): key
             value ([type]): new key value
-
-        Raises:
-            TypeError: raise an error when this method is called and tha data shared type is not a dict
         """
         if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
@@ -709,16 +704,7 @@ class SharedMemory:
         else:
             self.__semaphore.acquire()
 
-        if self.__type == list:
-            if self.__log is not None:
-                self.__writeLog(1, "Data shared type is list not dict.")
-
-            raise TypeError("Data shared type is list not dict.")
-
         self.__value = self.getValue(mutex=True)
-
-        if type(key) is int:
-            key = str(key)
 
         if self.__type == dict:
             if type(key) is int:

@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Thu Aug 31 2023
+Last Modified: Fri Sep 01 2023
 Modified By: Zentetsu
 
 ----
@@ -46,6 +46,7 @@ HISTORY:
 2023-07-14	Zen	Fixing int conversion
 2023-08-13	Zen	Correcting numpy support + int conversion
 2023-08-31	Zen	Correcting setitem method
+2023-09-01	Zen	Correcting memory allocation
 '''
 
 from abc import ABC, abstractmethod
@@ -82,14 +83,14 @@ _NPARRAY    = 0x08
 class SharedMemory:
     """Shared Memory class
     """
-    def __init__(self, name:str, value=None, path:str=None, size:int=8, client:bool=False, log:str=None):
+    def __init__(self, name:str, value=None, path:str=None, size:int=1024, client:bool=False, log:str=None):
         """Class constructor
 
         Args:
             name (str): desired name for the sharing space
             value ([type], optional): value to share with the other Server. Defaults to None.
             path (str, optional): path to load JSON file and sharing data inside. Defaults to None.
-            size (int, optional): size of the shared space or str value. Defaults to 10.
+            size (int, optional): size in bytes of the shared space. Defaults to 1024.
             client (bool, optional): will creat a client or server instance
 
         Raises:
@@ -315,7 +316,9 @@ class SharedMemory:
     def __initSharedMemory(self):
         """Method to initialize the shared space
         """
-        self.__size = sys.getsizeof(self.__encoding(self.__value))
+        if self.__size is None or self.__size < sys.getsizeof(self.__encoding(self.__value)):
+            self.__size = sys.getsizeof(self.__encoding(self.__value))
+
         self.__memory = None
         self.__semaphore = None
         self.__mapfile = None

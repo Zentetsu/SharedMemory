@@ -83,14 +83,14 @@ _NPARRAY    = 0x08
 class SharedMemory:
     """Shared Memory class
     """
-    def __init__(self, name:str, value=None, path:str=None, size:int=1024, client:bool=False, log:str=None):
+    def __init__(self, name:str, value=None, path:str=None, size:int=None, client:bool=False, log:str=None):
         """Class constructor
 
         Args:
             name (str): desired name for the sharing space
             value ([type], optional): value to share with the other Server. Defaults to None.
             path (str, optional): path to load JSON file and sharing data inside. Defaults to None.
-            size (int, optional): size in bytes of the shared space. Defaults to 1024.
+            size (int, optional): size in bytes of the shared space. Defaults to None.
             client (bool, optional): will creat a client or server instance
 
         Raises:
@@ -316,7 +316,7 @@ class SharedMemory:
     def __initSharedMemory(self):
         """Method to initialize the shared space
         """
-        if self.__size is None or self.__size < sys.getsizeof(self.__encoding(self.__value)):
+        if self.__size is None:
             self.__size = sys.getsizeof(self.__encoding(self.__value))
 
         self.__memory = None

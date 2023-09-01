@@ -97,6 +97,7 @@ class SharedMemory:
             SMMultiInputError: raise an error when value and path are both at None or initialized
         """
         self.__log = log
+        self.__size = None
 
         if self.__log is not None:
             f = open(os.devnull, 'w')

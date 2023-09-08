@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Mon Mar 06 2023
+Last Modified: Fri Sep 08 2023
 Modified By: Zentetsu
 
 ----
@@ -63,8 +63,8 @@ def test_connection2():
     print("Create Server instance with Client(after):", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test27", "azerty", log="./test_server.log", client=True)
-        s = SharedMemory("test27", log="./test_server.log", client=False)
+        c = SharedMemory("test2", "azerty", log="./test_server.log", client=True)
+        s = SharedMemory("test2", log="./test_server.log", client=False)
         res = c.getAvailability() and s.getAvailability()
         c.close()
         s.close()
@@ -78,8 +78,8 @@ def test_value():
     print("Server check value \"azerty\":", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test41", "azerty", log="./test_server.log", client=True)
-        s = SharedMemory("test41", log="./test_server.log", client=False)
+        c = SharedMemory("test3", "azerty", log="./test_server.log", client=True)
+        s = SharedMemory("test3", log="./test_server.log", client=False)
         res = s.getValue() == "azerty"
         c.close()
         s.close()
@@ -93,8 +93,8 @@ def test_editValue():
     print("Server edit value \"azerty\" to \"ytreza\":", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test51", "azerty", log="./test_server.log", client=True)
-        s = SharedMemory("test51", log="./test_server.log", client=False)
+        c = SharedMemory("test4", "azerty", log="./test_server.log", client=True)
+        s = SharedMemory("test4", log="./test_server.log", client=False)
         s.setValue("ytreza")
         res1 = c.getValue() == "ytreza"
         res2 = c[0]== "ytreza"
@@ -111,8 +111,8 @@ def test_clientStopped():
     print("Server test access value when Client stopped:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test62", "azerty", log="./test_server.log", client=True)
-        s = SharedMemory("test62", log="./test_server.log", client=False)
+        c = SharedMemory("test5", "azerty", log="./test_server.log", client=True)
+        s = SharedMemory("test5", log="./test_server.log", client=False)
         c.close()
         s.setValue("toto")
         res1 = s.getValue() == None
@@ -127,8 +127,8 @@ def test_serverStopped():
     print("Client test access value when Server stopped:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test8", "azerty", log="./test_server.log", client=True)
-        s = SharedMemory("test8", log="./test_server.log", client=False)
+        c = SharedMemory("test6", "azerty", log="./test_server.log", client=True)
+        s = SharedMemory("test6", log="./test_server.log", client=False)
         s.close()
         c.setValue("toto")
         assert c.getValue() == None
@@ -151,8 +151,8 @@ def test_multiStop():
     print("Server test mutli stop:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test9", "azerty", log="./test_server.log", client=True)
-        s = SharedMemory("test9", log="./test_server.log", client=False)
+        c = SharedMemory("test7", "azerty", log="./test_server.log", client=True)
+        s = SharedMemory("test7", log="./test_server.log", client=False)
         s.close()
         s.close()
         c.close()
@@ -166,8 +166,8 @@ def test_availability():
     print("Check availability for Client and Server:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        c = SharedMemory("test10", "azerty", log="./test_server.log", client=True)
-        s = SharedMemory("test10", log="./test_server.log", client=False)
+        c = SharedMemory("test8", "azerty", log="./test_server.log", client=True)
+        s = SharedMemory("test8", log="./test_server.log", client=False)
         res1 = c.getAvailability() == True
         res2 =  s.getAvailability() == True
         s.close()
@@ -183,8 +183,8 @@ def test_serverFirst():
     print("Create Server first:", end=" ")
     try:
         # with contextlib.redirect_stdout(None):
-        s = SharedMemory("test10", log="./test_server.log", client=False)
-        c = SharedMemory("test10", "azerty", log="./test_server.log", client=True)
+        s = SharedMemory("test9", log="./test_server.log", client=False)
+        c = SharedMemory("test9", "azerty", log="./test_server.log", client=True)
         res1 = c.getAvailability() == True
         res2 =  s.getAvailability() == True
         assert res1

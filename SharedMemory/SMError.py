@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Tue Oct 19 2021
+Last Modified: Fri Sep 01 2023
 Modified By: Zentetsu
 
 ----
@@ -95,6 +95,26 @@ class SMNotDefined(Exception):
         """
         if message is None:
             self.message = "shared memory called '" + name + "' is not defined."
+        else:
+            self.message = message
+
+        super().__init__(self.message)
+
+class SMManagerName(Exception):
+    """Class focused on catching an attempt to access an unintialized shared memory
+
+    Args:
+        Exception (Exception):
+    """
+    def __init__(self, name, message=None):
+        """Class constructor
+
+        Args:
+            name (str): shared memory name
+            message (str, optional): message. Defaults to None.
+        """
+        if message is None:
+            self.message = "shared memory called '" + name + "' is defined as the shared memory manager."
         else:
             self.message = message
 

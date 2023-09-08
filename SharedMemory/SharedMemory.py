@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Fri Sep 01 2023
+Last Modified: Fri Sep 08 2023
 Modified By: Zentetsu
 
 ----
@@ -47,10 +47,11 @@ HISTORY:
 2023-08-13	Zen	Correcting numpy support + int conversion
 2023-08-31	Zen	Correcting setitem method
 2023-09-01	Zen	Correcting memory allocation
+2023-09-08	Zen	Correcting memory and nummpy support + empty list support
 '''
 
 from abc import ABC, abstractmethod
-from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, SMAlreadyExist, SMEncoding
+from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, SMManagerName, SMAlreadyExist, SMEncoding
 import posix_ipc
 import logging
 import struct
@@ -80,9 +81,13 @@ _DICT       = 0x06
 _TUPLE      = 0x07
 _NPARRAY    = 0x08
 
+_MAN_NAME   = "man"
+
 class SharedMemory:
     """Shared Memory class
     """
+    MAN = False
+
     def __init__(self, name:str, value=None, path:str=None, size:int=None, client:bool=False, log:str=None):
         """Class constructor
 
@@ -102,6 +107,12 @@ class SharedMemory:
         if self.__log is not None:
             f = open(os.devnull, 'w')
             sys.stdout = f
+
+        if name == _MAN_NAME and sys.platform == "darwin" and not SharedMemory.MAN:
+            if self.__log is not None:
+                self.__writeLog(1, "shared memory called '" + _MAN_NAME + "' is defined as the shared memory manager.")
+
+            raise SMManagerName(_MAN_NAME)
 
         if client and (value is None and path is None or value is not None and path is not None):
             if self.__log is not None:
@@ -125,6 +136,9 @@ class SharedMemory:
         self.__client = client
 
         self.__initSharedMemory()
+
+        if not SharedMemory.MAN:
+            SharedMemory.__addToManager(name)
 
     def restart(self):
         """Method to restart the shared memory space
@@ -182,6 +196,9 @@ class SharedMemory:
 
             self.__memory = None
             self.__semaphore = None
+
+        if not SharedMemory.MAN:
+            SharedMemory.__removeFromManager(self.__name_memory[5:])
 
     def setValue(self, value, mutex=False) -> bool:
         """Method to set the shared value
@@ -259,7 +276,7 @@ class SharedMemory:
 
         _decoded_data = self.__decoding(_encoded_data[1:len(_encoded_data)-1])
 
-        self.__value == _decoded_data
+        self.__value = _decoded_data
 
         if not mutex:
             self.__semaphore.release()
@@ -485,9 +502,6 @@ class SharedMemory:
             value ([type]): data to decode
         """
         if value[0] == _INT:
-        #     for i in range(0, value[1]):
-        #         _d_data = _d_data + (value[i+2] << 8 * (value[1]-i-1))
-
             _d_data = (value[2] << 56) + \
                      (value[3] << 48) + \
                      (value[4] << 40) + \
@@ -541,14 +555,16 @@ class SharedMemory:
             _d_data = bytearray.fromhex(hex(_d_data)[2:]).decode()
 
         elif value[0] == _LIST or value[0] == _TUPLE:
-            value = value[2:]
-            _d_data = []
             c_type = value[0]
+            _d_data = []
 
-            while len(value) != 0:
-                new_data = value[:2+value[1]]
-                value = value[2+value[1]:]
-                _d_data.append(self.__decoding(new_data))
+            if len(value) != 2:
+                value = value[2:]
+
+                while len(value) != 0:
+                    new_data = value[:2+value[1]]
+                    value = value[2+value[1]:]
+                    _d_data.append(self.__decoding(new_data))
 
             if c_type == _TUPLE:
                 _d_data = tuple(_d_data)
@@ -814,15 +830,81 @@ class SharedMemory:
         """
         _s = "Client: " + str(self.__name_memory) + "\n"\
             + "\tAvailable: " + self.getAvailability().__repr__() + "\n"\
-            + "\tValue: " + self.__value.__repr__()
+            + "\tValue: " + self.getValue().__repr__()
 
         return _s
 
     @staticmethod
     def getSharedMemorySpace():
-        if os.name == "Windows" or os.name == "Darwin":
-            print("Not yet implemented.")
+        return SharedMemory.__getSharedMemoryList()
 
-            return
+    @staticmethod
+    def cleanSharedMemorySpace():
+        l = SharedMemory.__getSharedMemoryList()
+
+        for name in l:
+            if name == _MAN_NAME: continue
+            SharedMemory.__killShareMemorySpace(name)
+
+            if sys.platform == "darwin":
+                SharedMemory.__removeFromManager(name)
+
+    @staticmethod
+    def killManager():
+        SharedMemory.cleanSharedMemorySpace()
+        SharedMemory.__killShareMemorySpace(_MAN_NAME)
+
+    @staticmethod
+    def __killShareMemorySpace(name):
+        try:
+            __name_memory = _SHM_NAME_PREFIX + name
+            __semaphore = posix_ipc.Semaphore(_SEM_NAME_PREFIX + name)
+
+            posix_ipc.unlink_shared_memory(__name_memory)
+
+            __semaphore.release()
+            __semaphore.unlink()
+        except:
+            pass
+
+    @staticmethod
+    def __getSharedMemoryList():
+        if sys.platform == "darwin":
+            SharedMemory.MAN = True
+            man = SharedMemory(_MAN_NAME, client=False)
+
+            if not man.getAvailability():
+                man.close()
+                man = SharedMemory(_MAN_NAME, value= ['man'], size=1024*10, client=True)
+
+            l = man.getValue()
+            SharedMemory.MAN = False
+
+            return l
 
         return next(os.walk("/dev/shm/"), (None, None, []))[2]
+
+    @staticmethod
+    def __addToManager(name):
+        SharedMemory.MAN = True
+        man = SharedMemory(_MAN_NAME, client=False)
+
+        if not man.getAvailability():
+            man.close()
+            man = SharedMemory(_MAN_NAME, value= ['man'], size=1024*10, client=True)
+
+        l = man.getValue()
+        l.append(name)
+        man.setValue(l)
+
+        SharedMemory.MAN = False
+
+    @staticmethod
+    def __removeFromManager(name):
+        SharedMemory.MAN = True
+        man = SharedMemory(_MAN_NAME, client=False)
+
+        l = man.getValue()
+        l.remove(name)
+        man.setValue(l)
+        SharedMemory.MAN = False

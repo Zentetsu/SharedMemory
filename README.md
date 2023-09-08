@@ -7,12 +7,15 @@ Python shared memory library based an posix-ipc.
     * Basic type (int, float, bool, str)
     * list, tuple, dict and nparray
 * Management of the availability of shared memory space
-* Overloaded methods for list and dict
+* Overloaded methods for list and dict (basic)
+* Methods to manage all defined shared space
+* Space Memory configurable
 * Semaphore
 
-### Future improvement
-* Timeout for Semaphore
-* Adding more tests
+### Installation
+```console
+$> pip install SharedMemory
+```
 
 ### Example
 Example of execution in two instances of ipython.

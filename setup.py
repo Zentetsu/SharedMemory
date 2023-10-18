@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Fri Sep 08 2023
+Last Modified: Wed Oct 18 2023
 Modified By: Zentetsu
 
 ----
@@ -41,7 +41,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='SharedMemory',
-    version='1.4.0',
+    version='1.4.1',
     author='Zentetsu',
     packages=find_packages(exclude=['tests*']),
     license='GPLv3',

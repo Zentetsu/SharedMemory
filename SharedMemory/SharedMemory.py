@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Fri Sep 08 2023
+Last Modified: Wed Oct 18 2023
 Modified By: Zentetsu
 
 ----
@@ -48,6 +48,7 @@ HISTORY:
 2023-08-31	Zen	Correcting setitem method
 2023-09-01	Zen	Correcting memory allocation
 2023-09-08	Zen	Correcting memory and nummpy support + empty list support
+2023-10-18	Zen	Correcting close method
 '''
 
 from abc import ABC, abstractmethod
@@ -169,6 +170,9 @@ class SharedMemory:
                 self.__writeLog(0, "Client already stopped.")
             else:
                 print("INFO: Client already stopped.")
+
+            if not SharedMemory.MAN:
+                SharedMemory.__removeFromManager(self.__name_memory[5:])
 
             return
 
@@ -905,6 +909,8 @@ class SharedMemory:
         man = SharedMemory(_MAN_NAME, client=False)
 
         l = man.getValue()
-        l.remove(name)
+        if name in l:
+            l.remove(name)
+
         man.setValue(l)
         SharedMemory.MAN = False

@@ -52,7 +52,7 @@ HISTORY:
 '''
 
 from abc import ABC, abstractmethod
-from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, SMManagerName, SMAlreadyExist, SMEncoding
+from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, SMManagerName, SMAlreadyExist, SMEncoding, SMNameLength
 import posix_ipc
 import logging
 import struct
@@ -64,6 +64,8 @@ import os
 
 _SHM_NAME_PREFIX = '/psm_'
 _SEM_NAME_PREFIX = '/sem_'
+
+_MAX_LEN = 14
 
 _MODE = 0o600
 _FLAG = posix_ipc.O_CREX | os.O_RDWR
@@ -135,6 +137,9 @@ class SharedMemory:
         self.__name_semaphore = _SEM_NAME_PREFIX + name
         self.__type = type(self.__value)
         self.__client = client
+
+        if len(self.__name_memory) > _MAX_LEN:
+            raise SMNameLength(_MAN_NAME, len(self.__name_memory) - len(_SHM_NAME_PREFIX))
 
         self.__initSharedMemory()
 

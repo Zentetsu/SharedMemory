@@ -41,7 +41,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='SharedMemory',
-    version='1.4.1',
+    version='1.4.2',
     author='Zentetsu',
     packages=find_packages(exclude=['tests*']),
     license='GPLv3',

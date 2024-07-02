@@ -159,3 +159,20 @@ class SMEncoding(Exception):
             self.message = message
 
         super().__init__(self.message)
+
+class SMNameLength(Exception):
+    """Class focused on catching an attempt to create a shared memory with a name exceeding 14 characters
+
+    Args:
+        Exception (Exception):
+    """
+    def __init__(self, name, message=None):
+        """Class constructor
+
+        Args:
+            name (str): shared memory name
+            message (str, optional): message. Defaults to None.
+        """
+        self.message = "Your shared memory name: '" + name + "' have a length of " + str(message) + ". It shouldn't exceed 9 characters."
+
+        super().__init__(self.message)

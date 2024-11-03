@@ -1,11 +1,11 @@
-'''
+"""
 File: SharedMemory.py
 Created Date: Thursday, October 7th 2021, 8:37:52 pm
 Author: Zentetsu
 
 ----
 
-Last Modified: Wed Oct 18 2023
+Last Modified: Sun Nov 03 2024
 Modified By: Zentetsu
 
 ----
@@ -49,10 +49,10 @@ HISTORY:
 2023-09-01	Zen	Correcting memory allocation
 2023-09-08	Zen	Correcting memory and nummpy support + empty list support
 2023-10-18	Zen	Correcting close method
-'''
+2024-11-03	Zen	Updating docstring + type + silent mode
+"""  # noqa
 
-from abc import ABC, abstractmethod
-from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMNotDefined, SMManagerName, SMAlreadyExist, SMEncoding, SMNameLength
+from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMManagerName, SMAlreadyExist, SMEncoding, SMNameLength
 import posix_ipc
 import logging
 import struct
@@ -62,37 +62,38 @@ import mmap
 import sys
 import os
 
-_SHM_NAME_PREFIX = '/psm_'
-_SEM_NAME_PREFIX = '/sem_'
+_SHM_NAME_PREFIX = "/psm_"
+_SEM_NAME_PREFIX = "/sem_"
 
 _MAX_LEN = 14
 
 _MODE = 0o600
 _FLAG = posix_ipc.O_CREX | os.O_RDWR
 
-_BEGIN      = 0xAA
-_END        = 0xBB
-_CLOSED     = 0xAB
+_BEGIN = 0xAA
+_END = 0xBB
+_CLOSED = 0xAB
 
-_INT        = 0x00
-_FLOAT      = 0x01
-_BOOL       = 0x02
-_COMPLEX    = 0x03
-_STR        = 0x04
-_LIST       = 0x05
-_DICT       = 0x06
-_TUPLE      = 0x07
-_NPARRAY    = 0x08
+_INT = 0x00
+_FLOAT = 0x01
+_BOOL = 0x02
+_COMPLEX = 0x03
+_STR = 0x04
+_LIST = 0x05
+_DICT = 0x06
+_TUPLE = 0x07
+_NPARRAY = 0x08
 
-_MAN_NAME   = "man"
+_MAN_NAME = "man"
+
 
 class SharedMemory:
-    """Shared Memory class
-    """
+    """Shared Memory class."""
+
     MAN = False
 
-    def __init__(self, name:str, value=None, path:str=None, size:int=None, client:bool=False, log:str=None):
-        """Class constructor
+    def __init__(self, name: str, value: any = None, path: str = None, size: int = None, client: bool = False, log: str = None, silent: bool = False) -> None:
+        """Class constructor.
 
         Args:
             name (str): desired name for the sharing space
@@ -100,26 +101,35 @@ class SharedMemory:
             path (str, optional): path to load JSON file and sharing data inside. Defaults to None.
             size (int, optional): size in bytes of the shared space. Defaults to None.
             client (bool, optional): will creat a client or server instance
+            log (str, optional): write log into a file. Defaults to None.
+            silent (bool, optional): silent mode. Defaults to False.
 
         Raises:
             SMMultiInputError: raise an error when value and path are both at None or initialized
+
         """
         self.__log = log
         self.__size = None
+        self.__silent = silent
 
         if self.__log is not None:
-            f = open(os.devnull, 'w')
+            logging.basicConfig(filename=self.__log, format="%(asctime)s - " + _SHM_NAME_PREFIX[1:] + name + " - %(levelname)s - %(message)s")
+
+            f = open(os.devnull, "w")
             sys.stdout = f
 
         if name == _MAN_NAME and sys.platform == "darwin" and not SharedMemory.MAN:
             if self.__log is not None:
                 self.__writeLog(1, "shared memory called '" + _MAN_NAME + "' is defined as the shared memory manager.")
+            elif not self.__silent:
+                print("ERROR: shared memory called '" + _MAN_NAME + "' is defined as the shared memory manager.")
 
             raise SMManagerName(_MAN_NAME)
-
         if client and (value is None and path is None or value is not None and path is not None):
             if self.__log is not None:
                 self.__writeLog(1, "Conflict between value and json path intialization.")
+            elif not self.__silent:
+                print("ERROR: Conflict between value and json path intialization.")
 
             raise SMMultiInputError
         elif client and value is None and path is not None:
@@ -127,6 +137,8 @@ class SharedMemory:
         elif not client and (value is not None or path is not None):
             if self.__log is not None:
                 self.__writeLog(1, "Conflict between value and json path intialization.")
+            elif not self.__silent:
+                print("ERROR: Conflict between value and json path intialization.")
 
             raise SMMultiInputError
         else:
@@ -146,13 +158,12 @@ class SharedMemory:
         if not SharedMemory.MAN:
             SharedMemory.__addToManager(name)
 
-    def restart(self):
-        """Method to restart the shared memory space
-        """
+    def restart(self) -> None:
+        """Restart the shared memory space."""
         if not self.__client:
             if self.__log is not None:
                 self.__writeLog(3, "Only client can restart Shared Memory space.")
-            else:
+            elif not self.__silent:
                 print("WARNING: Only client can restart Shared Memory space.")
 
             return
@@ -160,20 +171,19 @@ class SharedMemory:
         if self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(0, "Client already running.")
-            else:
+            elif not self.__silent:
                 print("INFO: Client already running.")
 
             return
 
         self.__initSharedMemory()
 
-    def close(self):
-        """Method to close the shared space
-        """
+    def close(self) -> None:
+        """Close the shared memory space."""
         if not self.getAvailability():
             if self.__log is not None:
                 self.__writeLog(0, "Client already stopped.")
-            else:
+            elif not self.__silent:
                 print("INFO: Client already stopped.")
 
             if not SharedMemory.MAN:
@@ -200,8 +210,10 @@ class SharedMemory:
                 self.__semaphore.release()
                 self.__semaphore.unlink()
             except:
-                if self.__log:
+                if self.__log is not None:
                     self.__writeLog(0, "SharedMemory already closed.")
+                elif not self.__silent:
+                    print("INFO: SharedMemory already closed.")
 
             self.__memory = None
             self.__semaphore = None
@@ -209,19 +221,21 @@ class SharedMemory:
         if not SharedMemory.MAN:
             SharedMemory.__removeFromManager(self.__name_memory[5:])
 
-    def setValue(self, value, mutex=False) -> bool:
-        """Method to set the shared value
+    def setValue(self, value: any, mutex: bool = False) -> bool:
+        """Set the shared memory value.
 
         Args:
-            value ([type]): data to add to the shared memory
+            value (any): data to add to the shared memory
+            mutex (bool, optional): use mutex or not. Defaults to False.
 
         Returns:
             bool: return if value has been updated
+
         """
         if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
-            else:
+            elif not self.__silent:
                 print("ERROR: Shared Memory space doesn't exist.")
 
             return None
@@ -233,7 +247,7 @@ class SharedMemory:
 
         _data = self.__encoding(value)
 
-        _packed = struct.pack('<%dI' % len(_data), *_data)
+        _packed = struct.pack("<%dI" % len(_data), *_data)
 
         self.__mapfile.seek(0)
         self.__mapfile.write(_packed)
@@ -243,16 +257,20 @@ class SharedMemory:
 
         return True
 
-    def getValue(self, mutex=False):
-        """Method to return the shared value
+    def getValue(self, mutex: bool = False) -> any:
+        """Return the shared memory value.
+
+        Args:
+            mutex (bool, optional): use mutex or not. Defaults to False.
 
         Returns:
-            [type]: return data from the shared space
+            any: return data from the shared space
+
         """
         if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
-            else:
+            elif not self.__silent:
                 print("ERROR: Shared Memory space doesn't exist.")
 
             return None
@@ -262,9 +280,9 @@ class SharedMemory:
         try:
             self.__mapfile.seek(0)
             _packed = self.__mapfile.read()
-            _encoded_data = list(struct.unpack('<%dI' % (len(_packed) // 4), _packed))
+            _encoded_data = list(struct.unpack("<%dI" % (len(_packed) // 4), _packed))
             _res = len(_encoded_data) - 1 - _encoded_data[::-1].index(_END)
-            _encoded_data = _encoded_data[:_res+1]
+            _encoded_data = _encoded_data[: _res + 1]
         except:
             return None
 
@@ -274,16 +292,16 @@ class SharedMemory:
         if _encoded_data[1] == _CLOSED:
             raise SMEncoding("CLOSED")
         elif _encoded_data[1] == _DICT:
-            nb_element = [self.__decoding(_encoded_data[2:_encoded_data[3]+4])][0]
-            _encoded_data = _encoded_data[:nb_element+5+_encoded_data[3]]
+            nb_element = [self.__decoding(_encoded_data[2 : _encoded_data[3] + 4])][0]
+            _encoded_data = _encoded_data[: nb_element + 5 + _encoded_data[3]]
         else:
             nb_element = _encoded_data[2]
-            _encoded_data = _encoded_data[:nb_element+4]
+            _encoded_data = _encoded_data[: nb_element + 4]
 
-        if _encoded_data[len(_encoded_data)-1] != _END:
+        if _encoded_data[len(_encoded_data) - 1] != _END:
             raise SMEncoding("END")
 
-        _decoded_data = self.__decoding(_encoded_data[1:len(_encoded_data)-1])
+        _decoded_data = self.__decoding(_encoded_data[1 : len(_encoded_data) - 1])
 
         self.__value = _decoded_data
 
@@ -292,19 +310,21 @@ class SharedMemory:
 
         return _decoded_data
 
-    def getType(self):
-        """Method that returns data type
+    def getType(self) -> type:
+        """Return data type of shared momory.
 
         Returns:
-            [type]: data type
+            type: data type
+
         """
         return self.__type
 
     def getAvailability(self) -> bool:
-        """Method that return the availability of Shared Memory
+        """Return the availability of Shared Memory.
 
         Returns:
             bool: Shared Memory availability status
+
         """
         if self.__memory is None and self.__mapfile is None and not self.__client:
             try:
@@ -324,25 +344,27 @@ class SharedMemory:
         except:
             return False
 
-    def exportToJSON(self, path:str):
-        """Method to export dict to JSON file
+    def exportToJSON(self, path: str) -> None:
+        """Export dict to JSON file.
 
         Args:
             path (str): file path
+
         """
         if self.__type is not dict:
             if self.__log is not None:
                 self.__writeLog(1, "Data type must be dict.")
+            elif not self.__silent:
+                print("ERROR: Data type must be dict.")
 
             raise TypeError("Data type must be dict.")
 
-        _file = open(path, 'w+')
+        _file = open(path, "w+")
         json.dump(self.getValue(), _file)
         _file.close()
 
-    def __initSharedMemory(self):
-        """Method to initialize the shared space
-        """
+    def __initSharedMemory(self) -> None:
+        """Initialize the shared space."""
         if self.__size is None:
             self.__size = sys.getsizeof(self.__encoding(self.__value))
 
@@ -370,7 +392,7 @@ class SharedMemory:
             except posix_ipc.ExistentialError:
                 if self.__log is not None:
                     self.__writeLog(3, "Memory space not yet created.")
-                else:
+                elif not self.__silent:
                     print("WARNING: Memory space not yet created.")
 
                 return
@@ -383,28 +405,30 @@ class SharedMemory:
             self.__value = self.getValue()
             self.__type = type(self.__value)
 
-    def __checkValue(self, value:type):
-        """Method to check value type
+    def __checkValue(self, value: type) -> bool:
+        """Check value type.
 
         Args:
-            value ([type]): value to test
+            value (type): value to test
 
         Raises:
             SMTypeError: raise an error when the value is a dict or a list
 
         Returns:
-            [type]: return the initialized value
+            type: return the initialized value
+
         """
         if value != self.__type:
             raise SMTypeError(value)
 
         return True
 
-    def __encoding(self, value):
-        """Method to encode value
+    def __encoding(self, value: any) -> list:
+        """Encode value.
 
         Args:
-            value ([type]): data to encode
+            value (any): data to encode
+
         """
         _data = [_BEGIN]
 
@@ -454,7 +478,7 @@ class SharedMemory:
             _data.append(_STR)
             _data.append(9)
 
-            str_encoded = int(value.encode('utf-8').hex(), 16)
+            str_encoded = int(value.encode("utf-8").hex(), 16)
 
             _data.append((0xFF0000000000000000 & str_encoded) >> 64)
             _data.append((0xFF00000000000000 & str_encoded) >> 56)
@@ -504,33 +528,20 @@ class SharedMemory:
 
         return _data
 
-    def __decoding(self, value):
-        """Method to decode value
+    def __decoding(self, value: any) -> any:
+        """MDecode value.
 
         Args:
-            value ([type]): data to decode
+            value (any): data to decode
+
         """
         if value[0] == _INT:
-            _d_data = (value[2] << 56) + \
-                     (value[3] << 48) + \
-                     (value[4] << 40) + \
-                     (value[5] << 32) + \
-                     (value[6] << 24) + \
-                     (value[7] << 16) + \
-                     (value[8] << 8) + \
-                     (value[9] << 0)
+            _d_data = (value[2] << 56) + (value[3] << 48) + (value[4] << 40) + (value[5] << 32) + (value[6] << 24) + (value[7] << 16) + (value[8] << 8) + (value[9] << 0)
 
             _d_data = self.__convertBin2IF(bin(_d_data), int)
 
         elif value[0] == _FLOAT:
-            _d_data = (value[2] << 56) + \
-                     (value[3] << 48) + \
-                     (value[4] << 40) + \
-                     (value[5] << 32) + \
-                     (value[6] << 24) + \
-                     (value[7] << 16) + \
-                     (value[8] << 8) + \
-                     (value[9] << 0)
+            _d_data = (value[2] << 56) + (value[3] << 48) + (value[4] << 40) + (value[5] << 32) + (value[6] << 24) + (value[7] << 16) + (value[8] << 8) + (value[9] << 0)
 
             _d_data = self.__convertBin2IF(bin(_d_data), float)
 
@@ -540,26 +551,17 @@ class SharedMemory:
             c_type = value[0]
 
             while len(value) != 0:
-                new_data = value[:2+value[1]]
-                value = value[2+value[1]:]
+                new_data = value[: 2 + value[1]]
+                value = value[2 + value[1] :]
                 _d_data.append(self.__decoding(new_data))
 
             _d_data = complex(_d_data[0], _d_data[1])
 
         elif value[0] == _BOOL:
-
             _d_data = bool(value[2])
 
         elif value[0] == _STR:
-            _d_data = (value[2] << 64) + \
-                     (value[3] << 56) + \
-                     (value[4] << 48) + \
-                     (value[5] << 40) + \
-                     (value[6] << 32) + \
-                     (value[7] << 24) + \
-                     (value[8] << 16) + \
-                     (value[9] << 8) + \
-                     (value[10] << 0)
+            _d_data = (value[2] << 64) + (value[3] << 56) + (value[4] << 48) + (value[5] << 40) + (value[6] << 32) + (value[7] << 24) + (value[8] << 16) + (value[9] << 8) + (value[10] << 0)
 
             _d_data = bytearray.fromhex(hex(_d_data)[2:]).decode()
 
@@ -571,30 +573,30 @@ class SharedMemory:
                 value = value[2:]
 
                 while len(value) != 0:
-                    new_data = value[:2+value[1]]
-                    value = value[2+value[1]:]
+                    new_data = value[: 2 + value[1]]
+                    value = value[2 + value[1] :]
                     _d_data.append(self.__decoding(new_data))
 
             if c_type == _TUPLE:
                 _d_data = tuple(_d_data)
 
         elif value[0] == _DICT:
-            nb_value = value[1:value[2]+3]
+            nb_value = value[1 : value[2] + 3]
             nb_value = self.__decoding(nb_value)
-            value = value[value[2]+3:value[2]+3+nb_value]
+            value = value[value[2] + 3 : value[2] + 3 + nb_value]
             _d_data = {}
 
             while len(value) != 0:
-                new_key = value[:value[1]+2]
-                value = value[value[1]+2:]
+                new_key = value[: value[1] + 2]
+                value = value[value[1] + 2 :]
 
                 if value[0] == 6:
-                    nb_value = self.__decoding(value[1:value[2]+3])
-                    new_data = value[:nb_value+value[2]+3]
-                    value = value[nb_value+value[2]+3:]
+                    nb_value = self.__decoding(value[1 : value[2] + 3])
+                    new_data = value[: nb_value + value[2] + 3]
+                    value = value[nb_value + value[2] + 3 :]
                 else:
-                    new_data = value[:2+value[1]]
-                    value = value[2+value[1]:]
+                    new_data = value[: 2 + value[1]]
+                    value = value[2 + value[1] :]
 
                 _d_data[self.__decoding(new_key)] = self.__decoding(new_data)
 
@@ -605,8 +607,8 @@ class SharedMemory:
             _same = True
 
             while len(value) != 0:
-                new_data = value[:2+value[1]]
-                value = value[2+value[1]:]
+                new_data = value[: 2 + value[1]]
+                value = value[2 + value[1] :]
 
                 _d = self.__decoding(new_data)
 
@@ -625,44 +627,49 @@ class SharedMemory:
 
         return _d_data
 
-    def __convertBin2IF(self, value:int, type:type) -> float:
-        """Method to convert value to int or float
+    def __convertBin2IF(self, value: int, type: type) -> float:
+        """Convert value to int or float.
 
         Args:
             value (int): data to convert
+            type (type): type of the data
 
         Returns:
             data converted
+
         """
         if type is int:
-            return struct.unpack('q', int(value, 2).to_bytes(8, byteorder="big"))[0]
+            return struct.unpack("q", int(value, 2).to_bytes(8, byteorder="big"))[0]
 
-        return struct.unpack('>d', int(value, 2).to_bytes(8, byteorder="big"))[0]
+        return struct.unpack(">d", int(value, 2).to_bytes(8, byteorder="big"))[0]
 
-    def __convertIF2Bin(self, value, type: type) -> int:
-        """Method to convert value to bin
+    def __convertIF2Bin(self, value: any, type: type) -> int:
+        """Convert value to bin.
 
         Args:
             value: data to convert
+            type: type of the data
 
         Returns:
             int: data converted
+
         """
         if type is int:
             [d] = struct.unpack(">Q", struct.pack("P", value))
         else:
             [d] = struct.unpack(">Q", struct.pack(">d", value))
 
-        return f'{d:064b}'
+        return f"{d:064b}"
 
-    def __initValueByJSON(self, path:str) -> dict:
-        """Method to extract value from a JSON file
+    def __initValueByJSON(self, path: str) -> dict:
+        """Extract value from a JSON file.
 
         Args:
             path (str): path to the JSON file
 
         Returns:
             dict: return  data from JSON file
+
         """
         _json_file = open(path)
         _value = json.load(_json_file)
@@ -670,12 +677,13 @@ class SharedMemory:
 
         return _value
 
-    def __writeLog(self, log_id:int, message:str):
-        """Write information into a log file
+    def __writeLog(self, log_id: int, message: str) -> None:
+        """Write information into a log file.
 
         Args:
             log_id (int): log id
             message (str): message to write into the log file
+
         """
         if log_id == 0:
             logging.info(message)
@@ -686,16 +694,17 @@ class SharedMemory:
         elif log_id == 3:
             logging.warning(message)
 
-    def __getitem__(self, key):
-        """Method to get item value from the shared data
+    def __getitem__(self, key: any) -> any:
+        """Get item value from the shared data.
 
         Args:
-            key ([type]): key
+            key (any): key
+
         """
         if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
-            else:
+            elif not self.__silent:
                 print("ERROR: Shared Memory space doesn't exist.")
 
             return None
@@ -716,17 +725,18 @@ class SharedMemory:
         else:
             return self.__value
 
-    def __setitem__(self, key, value):
-        """Method to update data of the shared space
+    def __setitem__(self, key: any, value: any) -> None:
+        """Update data of the shared space.
 
         Args:
             key (str): key
-            value ([type]): new key value
+            value (any): new key value
+
         """
         if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
-            else:
+            elif not self.__silent:
                 print("ERROR: Shared Memory space doesn't exist.")
 
             return None
@@ -752,18 +762,19 @@ class SharedMemory:
         self.__semaphore.release()
 
     def __len__(self) -> int:
-        """Method that returns the size of the shared data
+        """Return the size of the shared data.
 
         Returns:
             int: size of the shared data
 
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
+
         """
         if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
-            else:
+            elif not self.__silent:
                 print("ERROR: Shared Memory space doesn't exist.")
 
             return None
@@ -776,22 +787,23 @@ class SharedMemory:
 
         return self.__value.__len__()
 
-    def __contains__(self, key) -> bool:
-        """Method to check if an element is into the shared data
+    def __contains__(self, key: any) -> bool:
+        """Check if an element is into the shared data.
 
         Args:
-            key ([type]): Element to find
+            key (any): Element to find
 
         Returns:
             bool: boolean to determine if the element is or not into the shared data
 
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
+
         """
         if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
-            else:
+            elif not self.__silent:
                 print("ERROR: Shared Memory space doesn't exist.")
 
             return None
@@ -804,22 +816,23 @@ class SharedMemory:
 
         return self.__value.__contains__(key)
 
-    def __delitem__(self, key):
-        """Method to remove an element from the shared data
+    def __delitem__(self, key: any) -> None:
+        """Remove an element from the shared data.
 
         Args:
-            key ([type]): Element to remove
+            key (any): Element to remove
 
         Raises:
             TypeError: raise an error when this method is called and tha data shared type is not a dict
+
         """
         if not self.getAvailability() or self.__semaphore is None:
             if self.__log is not None:
                 self.__writeLog(1, "Shared Memory space doesn't exist.")
-            else:
+            elif not self.__silent:
                 print("ERROR: Shared Memory space doesn't exist.")
 
-            return None
+            return
         else:
             self.__semaphore.acquire()
 
@@ -831,40 +844,44 @@ class SharedMemory:
 
         self.__semaphore.release()
 
-    def __repr__(self):
-        """Redefined method to print value of the Client Class instance
+    def __repr__(self) -> str:
+        """Print value of the Client Class instance.
 
         Returns:
             str: printable value of Client Class instance
+
         """
-        _s = "Client: " + str(self.__name_memory) + "\n"\
-            + "\tAvailable: " + self.getAvailability().__repr__() + "\n"\
-            + "\tValue: " + self.getValue().__repr__()
+        _s = "Client: " + str(self.__name_memory) + "\n" + "\tAvailable: " + self.getAvailability().__repr__() + "\n" + "\tValue: " + self.getValue().__repr__()
 
         return _s
 
     @staticmethod
-    def getSharedMemorySpace():
+    def getSharedMemorySpace() -> list:
+        """Get list of all shared memory space."""
         return SharedMemory.__getSharedMemoryList()
 
     @staticmethod
-    def cleanSharedMemorySpace():
+    def cleanSharedMemorySpace() -> None:
+        """Clean all shared memory space."""
         l = SharedMemory.__getSharedMemoryList()
 
         for name in l:
-            if name == _MAN_NAME: continue
+            if name == _MAN_NAME:
+                continue
             SharedMemory.__killShareMemorySpace(name)
 
             if sys.platform == "darwin":
                 SharedMemory.__removeFromManager(name)
 
     @staticmethod
-    def killManager():
+    def killManager() -> None:
+        """Kill all shared memory with the manager."""
         SharedMemory.cleanSharedMemorySpace()
         SharedMemory.__killShareMemorySpace(_MAN_NAME)
 
     @staticmethod
-    def __killShareMemorySpace(name):
+    def __killShareMemorySpace(name: str) -> None:
+        """Kill a specific shared memory space."""
         try:
             __name_memory = _SHM_NAME_PREFIX + name
             __semaphore = posix_ipc.Semaphore(_SEM_NAME_PREFIX + name)
@@ -877,14 +894,15 @@ class SharedMemory:
             pass
 
     @staticmethod
-    def __getSharedMemoryList():
+    def __getSharedMemoryList() -> list:
+        """Get list of all shared memory space."""
         if sys.platform == "darwin":
             SharedMemory.MAN = True
             man = SharedMemory(_MAN_NAME, client=False)
 
             if not man.getAvailability():
                 man.close()
-                man = SharedMemory(_MAN_NAME, value= ['man'], size=1024*10, client=True)
+                man = SharedMemory(_MAN_NAME, value=["man"], size=1024 * 10, client=True)
 
             l = man.getValue()
             SharedMemory.MAN = False
@@ -894,13 +912,14 @@ class SharedMemory:
         return next(os.walk("/dev/shm/"), (None, None, []))[2]
 
     @staticmethod
-    def __addToManager(name):
+    def __addToManager(name: str) -> None:
+        """Add a shared memory space to the manager."""
         SharedMemory.MAN = True
         man = SharedMemory(_MAN_NAME, client=False)
 
         if not man.getAvailability():
             man.close()
-            man = SharedMemory(_MAN_NAME, value= ['man'], size=1024*10, client=True)
+            man = SharedMemory(_MAN_NAME, value=["man"], size=1024 * 10, client=True)
 
         l = man.getValue()
         l.append(name)
@@ -909,7 +928,8 @@ class SharedMemory:
         SharedMemory.MAN = False
 
     @staticmethod
-    def __removeFromManager(name):
+    def __removeFromManager(name: str) -> None:
+        """Remove a shared memory space from the manager."""
         SharedMemory.MAN = True
         man = SharedMemory(_MAN_NAME, client=False)
 

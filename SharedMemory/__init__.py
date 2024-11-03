@@ -1,11 +1,11 @@
-'''
+"""
 File: __init__.py
 Created Date: Wednesday, July 3rd 2020, 8:08:52 pm
 Author: Zentetsu
 
 ----
 
-Last Modified: Tue Oct 19 2021
+Last Modified: Sun Nov 03 2024
 Modified By: Zentetsu
 
 ----
@@ -34,7 +34,6 @@ HISTORY:
 2020-07-03	Zen	Adding import for Server
 2020-07-01	Zen	Creating file
 2021-10-19	Zen	Removing import
-'''
-
+"""  # noqa
 
 from .SharedMemory import SharedMemory

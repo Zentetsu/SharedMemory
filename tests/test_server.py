@@ -1,11 +1,11 @@
-'''
+"""
 File: test_server.py
 Created Date: Wednesday, July 3rd 2020, 8:17:04 pm
 Author: Zentetsu
 
 ----
 
-Last Modified: Wed Oct 18 2023
+Last Modified: Sun Nov 03 2024
 Modified By: Zentetsu
 
 ----
@@ -39,174 +39,145 @@ HISTORY:
 2020-07-03	Zen	Updating test file
 2020-07-01	Zen	Creating file
 2023-10-18	Zen	Updating test: checking manager
-'''
+2024-11-03	Zen	Updating docstring + unittest
+"""  # noqa
 
 # import sys
+
 # sys.path.insert(0, "../")
 
 from SharedMemory.SharedMemory import SharedMemory
-import contextlib
+import unittest
 
-def test_connection():
-    print("Create Server instance without Client:", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            s = SharedMemory("test1", log="./test_server.log", client=False)
+
+class TestSharedMemoryServer(unittest.TestCase):
+    """Test the SharedMemory class in server mode."""
+
+    def test_connection(self) -> None:
+        """Test server connection without client."""
+        try:
+            s = SharedMemory("test1", client=False, silent=True)
             s.getValue()
             s.close()
-            assert "test1" not in SharedMemory.getSharedMemorySpace()
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test1" not in SharedMemory.getSharedMemorySpace())
+        except:
+            self.assertTrue(False)
 
-def test_connection2():
-    print("Create Server instance with Client(after):", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test2", "azerty", log="./test_server.log", client=True)
-            s = SharedMemory("test2", log="./test_server.log", client=False)
+    def test_connection2(self) -> None:
+        """Test server connection with client."""
+        try:
+            c = SharedMemory("test2", "azerty", client=True, silent=True)
+            s = SharedMemory("test2", client=False, silent=True)
             res = c.getAvailability() and s.getAvailability()
             c.close()
             s.close()
-            assert "test2" not in SharedMemory.getSharedMemorySpace() and res
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test2" not in SharedMemory.getSharedMemorySpace() and res)
+        except:
+            self.assertTrue(False)
 
-def test_value():
-    print("Server check value \"azerty\":", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test3", "azerty", log="./test_server.log", client=True)
-            s = SharedMemory("test3", log="./test_server.log", client=False)
+    def test_value(self) -> None:
+        """Test server value."""
+        try:
+            c = SharedMemory("test3", "azerty", client=True, silent=True)
+            s = SharedMemory("test3", client=False, silent=True)
             res = s.getValue() == "azerty"
             c.close()
             s.close()
-            assert "test3" not in SharedMemory.getSharedMemorySpace() and res
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test3" not in SharedMemory.getSharedMemorySpace() and res)
+        except:
+            self.assertTrue(False)
 
-def test_editValue():
-    print("Server edit value \"azerty\" to \"ytreza\":", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test4", "azerty", log="./test_server.log", client=True)
-            s = SharedMemory("test4", log="./test_server.log", client=False)
+    def test_editValue(self) -> None:
+        """Test server edit value."""
+        try:
+            c = SharedMemory("test4", "azerty", client=True, silent=True)
+            s = SharedMemory("test4", client=False, silent=True)
             s.setValue("ytreza")
             res1 = c.getValue() == "ytreza"
             res2 = c[0] == "ytreza"
             c.close()
             s.close()
-            assert "test4" not in SharedMemory.getSharedMemorySpace() and res1 and res2
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test4" not in SharedMemory.getSharedMemorySpace() and res1 and res2)
+        except:
+            self.assertTrue(False)
 
-def test_clientStopped():
-    print("Server test access value when Client stopped:", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test5", "azerty", log="./test_server.log", client=True)
-            s = SharedMemory("test5", log="./test_server.log", client=False)
+    def test_clientStopped(self) -> None:
+        """Test server access value when client stopped."""
+        try:
+            c = SharedMemory("test5", "azerty", client=True, silent=True)
+            s = SharedMemory("test5", client=False, silent=True)
             c.close()
             s.setValue("toto")
             res1 = s.getValue() == None
             s.close()
-            assert "test5" not in SharedMemory.getSharedMemorySpace() and res1
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test5" not in SharedMemory.getSharedMemorySpace() and res1)
+        except:
+            self.assertTrue(False)
 
-def test_serverStopped():
-    print("Client test access value when Server stopped:", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test6", "azerty", log="./test_server.log", client=True)
-            s = SharedMemory("test6", log="./test_server.log", client=False)
+    def test_serverStopped(self) -> None:
+        """Test client access value when server stopped."""
+        try:
+            c = SharedMemory("test6", "azerty", client=True, silent=True)
+            s = SharedMemory("test6", client=False, silent=True)
             s.close()
             c.setValue("toto")
-            assert c.getValue() == None
-            assert c[0] == None
+            self.assertTrue(c.getValue() == None)
+            self.assertTrue(c[0] == None)
             c.restart()
             c.setValue("toto")
-            assert c.getValue() == "toto"
-            assert c[0] == "toto"
+            self.assertTrue(c.getValue() == "toto")
+            self.assertTrue(c[0] == "toto")
             s.restart()
-            assert s.getValue() == "toto"
-            assert s[0] == "toto"
+            self.assertTrue(s.getValue() == "toto")
+            self.assertTrue(s[0] == "toto")
             c.close()
             s.close()
-            assert "test6" not in SharedMemory.getSharedMemorySpace()
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test6" not in SharedMemory.getSharedMemorySpace())
+        except:
+            self.assertTrue(False)
 
-def test_multiStop():
-    print("Server test mutli stop:", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test7", "azerty", log="./test_server.log", client=True)
-            s = SharedMemory("test7", log="./test_server.log", client=False)
+    def test_multiStop(self) -> None:
+        """Test when the server is stopped multiple times."""
+        try:
+            c = SharedMemory("test7", "azerty", client=True, silent=True)
+            s = SharedMemory("test7", client=False, silent=True)
             s.close()
             s.close()
             c.close()
-            assert "test7" not in SharedMemory.getSharedMemorySpace()
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test7" not in SharedMemory.getSharedMemorySpace())
+        except:
+            self.assertTrue(False)
 
-def test_availability():
-    print("Check availability for Client and Server:", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test8", "azerty", log="./test_server.log", client=True)
-            s = SharedMemory("test8", log="./test_server.log", client=False)
+    def test_availability(self) -> None:
+        """Check the availability of the server and the client."""
+        try:
+            c = SharedMemory("test8", "azerty", client=True, silent=True)
+            s = SharedMemory("test8", client=False, silent=True)
             res1 = c.getAvailability() == True
-            res2 =  s.getAvailability() == True
+            res2 = s.getAvailability() == True
             s.close()
             c.close()
-            assert "test8" not in SharedMemory.getSharedMemorySpace() and res1 and res2
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test8" not in SharedMemory.getSharedMemorySpace() and res1 and res2)
+        except:
+            self.assertTrue(False)
 
-def test_serverFirst():
-    print("Create Server first:", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            s = SharedMemory("test9", log="./test_server.log", client=False)
-            c = SharedMemory("test9", "azerty", log="./test_server.log", client=True)
+    def test_serverFirst(self) -> None:
+        """Test when the server is created first."""
+        try:
+            s = SharedMemory("test9", client=False, silent=True)
+            c = SharedMemory("test9", "azerty", client=True, silent=True)
             res1 = c.getAvailability() == True
-            res2 =  s.getAvailability() == True
-            assert res1
-            assert res2
-            assert s.getValue() == c.getValue()
+            res2 = s.getAvailability() == True
+            self.assertTrue(res1)
+            self.assertTrue(res2)
+            self.assertTrue(s.getValue() == c.getValue())
             s.close()
             c.close()
-            assert "test9" not in SharedMemory.getSharedMemorySpace()
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test9" not in SharedMemory.getSharedMemorySpace())
+        except:
+            self.assertTrue(False)
 
 
-print("-"*10)
-test_connection()
-test_connection2()
-test_value()
-test_editValue()
-test_clientStopped()
-test_serverStopped()
-test_multiStop()
-test_availability()
-test_serverFirst()
-print("-"*10)
+if __name__ == "__main__":
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestSharedMemoryServer)
+    testResult = unittest.TextTestRunner(verbosity=2).run(suite)

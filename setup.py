@@ -1,11 +1,11 @@
-'''
+"""
 File: setup.py
 Created Date: Friday, July 5th 2020, 10:11:51 pm
 Author: Zentetsu
 
 ----
 
-Last Modified: Wed Oct 18 2023
+Last Modified: Sun Nov 03 2024
 Modified By: Zentetsu
 
 ----
@@ -34,21 +34,20 @@ HISTORY:
 2020-07-03	Zen	Creating file
 2021-10-20	Zen	updating required lib
 2023-07-14	Zen	updating required lib
-'''
-
+"""  # noqa
 
 from setuptools import setup, find_packages
 
 setup(
-    name='SharedMemory',
-    version='1.4.2',
-    author='Zentetsu',
-    packages=find_packages(exclude=['tests*']),
-    license='GPLv3',
-    description='SharedMemory',
-    long_description=open('README.md').read(),
+    name="SharedMemory",
+    version="1.5.0",
+    author="Zentetsu",
+    packages=find_packages(exclude=["tests*"]),
+    license="GPLv3",
+    description="SharedMemory",
+    long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    install_requires=['posix-ipc', 'numpy'],
-    url='https://github.com/Zentetsu/SharedMemory',
-    python_requires='>=3.6',
+    install_requires=["posix-ipc", "numpy"],
+    url="https://github.com/Zentetsu/SharedMemory",
+    python_requires=">=3.6",
 )

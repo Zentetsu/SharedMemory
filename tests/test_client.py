@@ -1,11 +1,11 @@
-'''
+"""
 File: test_client.py
 Created Date: Wednesday, July 3rd 2020, 8:16:57 pm
 Author: Zentetsu
 
 ----
 
-Last Modified: Wed Oct 18 2023
+Last Modified: Sun Nov 03 2024
 Modified By: Zentetsu
 
 ----
@@ -41,102 +41,92 @@ HISTORY:
 2020-07-01	Zen	Creating file
 2023-09-08	Zen	Adding numpy test
 2023-10-18	Zen	Updating test: checking manager
-'''
+2024-11-03	Zen	Updating docstring + unittest
+"""  # noqa
 
 # import sys
+
 # sys.path.insert(0, "../")
 
 from SharedMemory.SharedMemory import SharedMemory
-import contextlib
 import numpy as np
+import unittest
 
-def test_str():
-    print("Create Client instance containing a \"string\":", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test1", "azerty", size=1024, client=True)
-            assert type(c.getValue()) is str
-            assert type(c[0]) is str
+
+class TestSharedMemoryClient(unittest.TestCase):
+    """Test the SharedMemory class in client mode."""
+
+    def test_str(self) -> None:
+        """Test client creation containing a string."""
+        try:
+            c = SharedMemory("test1", "azerty", size=1024, client=True, silent=True)
+            self.assertTrue(type(c.getValue()) is str)
+            self.assertTrue(type(c[0]) is str)
             c.close()
-            assert "test1" not in SharedMemory.getSharedMemorySpace()
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test1" not in SharedMemory.getSharedMemorySpace())
+        except:
+            self.assertTrue(False)
 
-def test_int():
-    print("Create Client instance containing an \"int\":", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test2", -125, size=1024, client=True)
+    def test_int(self) -> None:
+        """Test client creation containing an integer."""
+        try:
+            c = SharedMemory("test2", -125, size=1024, client=True, silent=True)
             res1 = type(c.getValue()) is int
             res2 = type(c[0]) is int
             res3 = c.getValue() == -125
             res4 = c[0] == -125
             c.close()
-            assert "test2" not in SharedMemory.getSharedMemorySpace()
-            assert res1 and res2 and res3 and res4
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test2" not in SharedMemory.getSharedMemorySpace())
+            self.assertTrue(res1 and res2 and res3 and res4)
+        except:
+            self.assertTrue(False)
 
-def test_float():
-    print("Create Client instance containing a \"float\":", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test3", -1.2, size=1024, client=True)
+    def test_float(self) -> None:
+        """Test client creation containing a float."""
+        try:
+            c = SharedMemory("test3", -1.2, size=1024, client=True, silent=True)
             res1 = type(c.getValue()) is float
             res2 = type(c[0]) is float
             res3 = c.getValue() == -1.2
             res4 = c[0] == -1.2
             c.close()
-            assert "test3" not in SharedMemory.getSharedMemorySpace()
-            assert res1 and res2 and res3 and res4
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test3" not in SharedMemory.getSharedMemorySpace())
+            self.assertTrue(res1 and res2 and res3 and res4)
+        except:
+            self.assertTrue(False)
 
-def test_bool():
-    print("Create Client instance containing a \"boolean\":", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test4", True, size=1024, client=True)
+    def test_bool(self) -> None:
+        """Test client creation containing a boolean."""
+        try:
+            c = SharedMemory("test4", True, size=1024, client=True, silent=True)
             res1 = type(c.getValue()) is bool
             res2 = type(c[0]) is bool
             res3 = c.getValue()
             res4 = c[0]
             c.close()
-            assert "test4" not in SharedMemory.getSharedMemorySpace()
-            assert res1 and res2 and res3 and res4
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test4" not in SharedMemory.getSharedMemorySpace())
+            self.assertTrue(res1 and res2 and res3 and res4)
+        except:
+            self.assertTrue(False)
 
-def test_dict():
-    print("Create Client instance containing a \"dict\":", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test5", {'a': 1}, size=1024, client=True)
+    def test_dict(self) -> None:
+        """Test client creation containing a dictionary."""
+        try:
+            c = SharedMemory("test5", {"a": 1}, size=1024, client=True, silent=True)
             res1 = type(c.getValue()) is dict
             res2 = c.getType() is dict
-            res3 = c.getValue()['a'] == 1
-            res4 = c['a'] == 1
+            res3 = c.getValue()["a"] == 1
+            res4 = c["a"] == 1
             c.close()
-            assert "test5" not in SharedMemory.getSharedMemorySpace()
-            assert res1 and res2 and res3 and res4
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test5" not in SharedMemory.getSharedMemorySpace())
+            self.assertTrue(res1 and res2 and res3 and res4)
+        except:
+            self.assertTrue(False)
 
-def test_list():
-    print("Create Client instance containing a \"list\":", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test6", [0, 1], size=1024, client=True)
+    def test_list(self) -> None:
+        """Test client creation containing a list."""
+        try:
+            c = SharedMemory("test6", [0, 1], size=1024, client=True, silent=True)
             res1 = type(c.getValue()) is list
             res2 = c.getType() is list
             res3 = c.getValue()[0] == 0
@@ -144,123 +134,88 @@ def test_list():
             res5 = c[0] == 0
             res6 = c[1] == 1
             c.close()
-            assert "test6" not in SharedMemory.getSharedMemorySpace()
-            assert res1 and res2 and res3 and res4 and res5 and res6
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test6" not in SharedMemory.getSharedMemorySpace())
+            self.assertTrue(res1 and res2 and res3 and res4 and res5 and res6)
+        except:
+            self.assertTrue(False)
 
-def test_numpy():
-    print("Create Client instance containing a \"numpy\":", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test7", np.array([10, 20]), size=1024, client=True)
+    def test_numpy(self) -> None:
+        """Test client creation containing a numpy array."""
+        try:
+            c = SharedMemory("test7", np.array([10, 20]), size=1024, client=True, silent=True)
             res1 = type(c.getValue()) is np.ndarray
             res2 = c.getType() is np.ndarray
             res3 = c.getValue()[0] == 10
             res4 = c.getValue()[1] == 20
             c.close()
-            assert "test7" not in SharedMemory.getSharedMemorySpace()
-            assert res1 and res2 and res3 and res4
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test7" not in SharedMemory.getSharedMemorySpace())
+            self.assertTrue(res1 and res2 and res3 and res4)
+        except:
+            self.assertTrue(False)
 
-def test_file():
-    print("Create Client instance from JSON file:", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory(name="test8", path="tests/test.json", size=1024, client=True)
+    def test_file(self) -> None:
+        """Test client creation from a JSON file."""
+        try:
+            c = SharedMemory(name="test8", path="tests/test.json", size=1024, client=True, silent=True)
             res = type(c.getValue()) is dict
             c.close()
-            assert "test8" not in SharedMemory.getSharedMemorySpace() and res
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test8" not in SharedMemory.getSharedMemorySpace() and res)
+        except:
+            self.assertTrue(False)
 
-def test_newValue():
-    print("Update Client value:", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test9", 1, size=1024, client=True)
+    def test_newValue(self) -> None:
+        """Test updating the value of the client."""
+        try:
+            c = SharedMemory("test9", 1, size=1024, client=True, silent=True)
             c.setValue(12)
             res1 = c.getValue() == 12
             res2 = c[0] == 12
             c.close()
-            assert "test9" not in SharedMemory.getSharedMemorySpace() and res1 and res2
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test9" not in SharedMemory.getSharedMemorySpace() and res1 and res2)
+        except:
+            self.assertTrue(False)
 
-def test_stop():
-    print("Stop Client:", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test10", 1, size=1024, client=True)
+    def test_stop(self) -> None:
+        """Test stopping the client."""
+        try:
+            c = SharedMemory("test10", 1, size=1024, client=True, silent=True)
             c.close()
-            assert "test10" not in SharedMemory.getSharedMemorySpace()
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test10" not in SharedMemory.getSharedMemorySpace())
+        except:
+            self.assertTrue(False)
 
-def test_call():
-    print("Stop Client 2:", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test11", 1, size=1024, client=True)
+    def test_call(self) -> None:
+        """Test client correctly stopped."""
+        try:
+            c = SharedMemory("test11", 1, size=1024, client=True, silent=True)
             c.close()
             c.close()
-            assert "test11" not in SharedMemory.getSharedMemorySpace()
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test11" not in SharedMemory.getSharedMemorySpace())
+        except:
+            self.assertTrue(False)
 
-def test_call2():
-    print("Stop Client 3:", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test12", 1, size=1024, client=True)
+    def test_call2(self) -> None:
+        """Test client correctly stop after restart."""
+        try:
+            c = SharedMemory("test12", 1, size=1024, client=True, silent=True)
             c.restart()
             c.close()
-            assert "test12" not in SharedMemory.getSharedMemorySpace()
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test12" not in SharedMemory.getSharedMemorySpace())
+        except:
+            self.assertTrue(False)
 
-def test_valueAccess():
-    print("Deleting value from overloaded method:", end=" ")
-    try:
-        with contextlib.redirect_stdout(None):
-            c = SharedMemory("test13", {'0':0, '1':1, '2':2, '3':3}, size=1024, client=True)
+    def test_valueAccess(self) -> None:
+        """Test __delitem__ method."""
+        try:
+            c = SharedMemory("test13", {"0": 0, "1": 1, "2": 2, "3": 3}, size=1024, client=True, silent=True)
             c.restart()
-            del c['0']
+            del c["0"]
             c.close()
-            assert "test13" not in SharedMemory.getSharedMemorySpace()
-        print("SUCCESSED")
-    except:
-        print("FAILED")
-        assert False
+            self.assertTrue("test13" not in SharedMemory.getSharedMemorySpace())
+        except:
+            self.assertTrue(False)
 
 
-print("-"*10)
-test_str()
-test_int()
-test_float()
-test_bool()
-test_dict()
-test_list()
-test_numpy()
-test_file()
-test_newValue()
-test_stop()
-test_call()
-test_call2()
-test_valueAccess()
-print("-"*10)
+if __name__ == "__main__":
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestSharedMemoryClient)
+    testResult = unittest.TextTestRunner(verbosity=2).run(suite)

@@ -131,3 +131,5 @@ dmypy.json
 # vscode
 .vscode/
 tests/context.py
+docs_SM/
+docs/

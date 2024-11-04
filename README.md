@@ -18,7 +18,7 @@ $> pip install SharedMemory
 ```
 
 ### Documentation
-Documentation and example are provided [here]([https://github.com/Zentetsu/RoboticHand](https://github.com/Zentetsu/SharedMemory/wiki))
+Documentation and example are provided [here](https://github.com/Zentetsu/SharedMemory/wiki)
 
 ### More
 [![PyPI version](https://badge.fury.io/py/SharedMemory.svg)](https://badge.fury.io/py/SharedMemory)

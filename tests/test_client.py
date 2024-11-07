@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sun Nov 03 2024
+Last Modified: Thu Nov 07 2024
 Modified By: Zentetsu
 
 ----
@@ -112,27 +112,50 @@ class TestSharedMemoryClient(unittest.TestCase):
     def test_dict(self) -> None:
         """Test client creation containing a dictionary."""
         try:
-            c = SharedMemory("test5", {"a": 1}, size=1024, client=True, silent=True)
+            c = SharedMemory("test5", {"a": 1, "b": np.zeros((64, 38, 3), dtype=np.uint8)}, size=1024, client=True, silent=True)
             res1 = type(c.getValue()) is dict
             res2 = c.getType() is dict
             res3 = c.getValue()["a"] == 1
             res4 = c["a"] == 1
+            res5 = type(c.getValue()["b"]) is np.ndarray
+            res6 = c["b"].shape == (64, 38, 3)
             c.close()
             self.assertTrue("test5" not in SharedMemory.getSharedMemorySpace())
-            self.assertTrue(res1 and res2 and res3 and res4)
+            self.assertTrue(res1 and res2 and res3 and res4 and res5 and res6)
         except:
             self.assertTrue(False)
 
     def test_list(self) -> None:
         """Test client creation containing a list."""
         try:
-            c = SharedMemory("test6", [0, 1], size=1024, client=True, silent=True)
+            np_test = np.zeros((1, 2, 3), dtype=np.uint8)
+            c = SharedMemory("test6", [0, 1, np_test], size=1024, client=True, silent=True)
             res1 = type(c.getValue()) is list
             res2 = c.getType() is list
             res3 = c.getValue()[0] == 0
             res4 = c.getValue()[1] == 1
             res5 = c[0] == 0
             res6 = c[1] == 1
+            res7 = type(c.getValue()[2]) is np.ndarray
+            res8 = c.getValue()[2].shape == np_test.shape
+            c.close()
+            self.assertTrue("test6" not in SharedMemory.getSharedMemorySpace())
+            self.assertTrue(res1 and res2 and res3 and res4 and res5 and res6 and res7 and res8)
+        except:
+            self.assertTrue(False)
+
+    def test_tuple(self) -> None:
+        """Test client creation containing a tuple."""
+        try:
+            np_test = np.zeros((1, 2, 3), dtype=np.uint8)
+            c = SharedMemory("test6", (0, 1, np_test), size=1024, client=True, silent=True)
+
+            res1 = type(c.getValue()) is tuple
+            res2 = c.getType() is tuple
+            res3 = c.getValue()[0] == 0
+            res4 = c.getValue()[1] == 1
+            res5 = type(c.getValue()[2]) is np.ndarray
+            res6 = c.getValue()[2].shape == np_test.shape
             c.close()
             self.assertTrue("test6" not in SharedMemory.getSharedMemorySpace())
             self.assertTrue(res1 and res2 and res3 and res4 and res5 and res6)
@@ -142,14 +165,16 @@ class TestSharedMemoryClient(unittest.TestCase):
     def test_numpy(self) -> None:
         """Test client creation containing a numpy array."""
         try:
-            c = SharedMemory("test7", np.array([10, 20]), size=1024, client=True, silent=True)
+            _np_test = np.zeros((1, 2, 3), dtype=np.uint32)
+            c = SharedMemory("test7", _np_test, size=1024, client=True, silent=True)
             res1 = type(c.getValue()) is np.ndarray
             res2 = c.getType() is np.ndarray
-            res3 = c.getValue()[0] == 10
-            res4 = c.getValue()[1] == 20
+            res3 = not False in (c.getValue() == _np_test)
+            res4 = c.getValue().shape == _np_test.shape
+            res5 = c.getValue().dtype == _np_test.dtype
             c.close()
             self.assertTrue("test7" not in SharedMemory.getSharedMemorySpace())
-            self.assertTrue(res1 and res2 and res3 and res4)
+            self.assertTrue(res1 and res2 and res3 and res4 and res5)
         except:
             self.assertTrue(False)
 
@@ -157,9 +182,10 @@ class TestSharedMemoryClient(unittest.TestCase):
         """Test client creation from a JSON file."""
         try:
             c = SharedMemory(name="test8", path="tests/test.json", size=1024, client=True, silent=True)
-            res = type(c.getValue()) is dict
+            res1 = type(c.getValue()) is dict
+            res2 = not (False in (c.getValue()["test2"][1] == np.zeros((4, 4, 2), dtype=np.uint8)))
             c.close()
-            self.assertTrue("test8" not in SharedMemory.getSharedMemorySpace() and res)
+            self.assertTrue("test8" not in SharedMemory.getSharedMemorySpace() and res1 and res2)
         except:
             self.assertTrue(False)
 

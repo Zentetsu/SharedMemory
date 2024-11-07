@@ -5,7 +5,7 @@ Author: Zentetsu
 
 ----
 
-Last Modified: Sun Nov 03 2024
+Last Modified: Thu Nov 07 2024
 Modified By: Zentetsu
 
 ----
@@ -50,8 +50,10 @@ HISTORY:
 2023-09-08	Zen	Correcting memory and nummpy support + empty list support
 2023-10-18	Zen	Correcting close method
 2024-11-03	Zen	Updating docstring + type + silent mode
+2024-11-07	Zen	Optimizing code for memory allocation
 """  # noqa
 
+from re import S
 from .SMError import SMMultiInputError, SMTypeError, SMSizeError, SMManagerName, SMAlreadyExist, SMEncoding, SMNameLength
 import posix_ipc
 import logging
@@ -67,22 +69,22 @@ _SEM_NAME_PREFIX = "/sem_"
 
 _MAX_LEN = 14
 
-_MODE = 0o600
+_MODE = 0o666
 _FLAG = posix_ipc.O_CREX | os.O_RDWR
 
-_BEGIN = 0xAA
-_END = 0xBB
-_CLOSED = 0xAB
+_BEGIN = b"\xaa"
+_END = b"\xbb"
+_CLOSED = b"\xab"
 
-_INT = 0x00
-_FLOAT = 0x01
-_BOOL = 0x02
-_COMPLEX = 0x03
-_STR = 0x04
-_LIST = 0x05
-_DICT = 0x06
-_TUPLE = 0x07
-_NPARRAY = 0x08
+_INT = b"\x00"
+_FLOAT = b"\x01"
+_BOOL = b"\x02"
+_COMPLEX = b"\x03"
+_STR = b"\x04"
+_LIST = b"\x05"
+_DICT = b"\x06"
+_TUPLE = b"\x07"
+_NPARRAY = b"\x08"
 
 _MAN_NAME = "man"
 
@@ -196,9 +198,7 @@ class SharedMemory:
         if self.__mapfile is not None:
             self.__mapfile.seek(0)
 
-            self.__mapfile.write_byte(_BEGIN)
-            self.__mapfile.write_byte(_CLOSED)
-            self.__mapfile.write_byte(_END)
+            self.__mapfile.write(_BEGIN + _CLOSED + _END)
 
             self.__mapfile.close()
             self.__mapfile = None
@@ -247,10 +247,19 @@ class SharedMemory:
 
         _data = self.__encoding(value)
 
-        _packed = struct.pack("<%dI" % len(_data), *_data)
+        if sys.getsizeof(_data) > self.__size:
+            if self.__log is not None:
+                self.__writeLog(1, "Data size is too big for the shared memory space.")
+            elif not self.__silent:
+                print("ERROR: Data size is too big for the shared memory space.")
+
+            if not mutex:
+                self.__semaphore.release()
+
+            return False
 
         self.__mapfile.seek(0)
-        self.__mapfile.write(_packed)
+        self.__mapfile.write(_data)
 
         if not mutex:
             self.__semaphore.release()
@@ -280,30 +289,24 @@ class SharedMemory:
         try:
             self.__mapfile.seek(0)
             _packed = self.__mapfile.read()
-            _encoded_data = list(struct.unpack("<%dI" % (len(_packed) // 4), _packed))
-            _res = len(_encoded_data) - 1 - _encoded_data[::-1].index(_END)
-            _encoded_data = _encoded_data[: _res + 1]
+            _shift = int.from_bytes(_packed[2:10], "big") + 11 if _packed[1].to_bytes(1, byteorder="big") in [_NPARRAY, _LIST, _TUPLE, _DICT] else _packed[2] + 4
+            _encoded_data = _packed[0:_shift]
         except:
             return None
 
-        if _encoded_data[0] != _BEGIN:
-            raise SMEncoding("BEGIN")
+        if (b := _encoded_data[0].to_bytes(1, byteorder="big") != _BEGIN) or _encoded_data[-1].to_bytes(1, byteorder="big") != _END:
+            if not mutex:
+                self.__semaphore.release()
 
-        if _encoded_data[1] == _CLOSED:
+            raise SMEncoding("BEGIN" if b else "END")
+
+        if _encoded_data[1].to_bytes(1, byteorder="big") == _CLOSED:
+            if not mutex:
+                self.__semaphore.release()
+
             raise SMEncoding("CLOSED")
-        elif _encoded_data[1] == _DICT:
-            nb_element = [self.__decoding(_encoded_data[2 : _encoded_data[3] + 4])][0]
-            _encoded_data = _encoded_data[: nb_element + 5 + _encoded_data[3]]
-        else:
-            nb_element = _encoded_data[2]
-            _encoded_data = _encoded_data[: nb_element + 4]
 
-        if _encoded_data[len(_encoded_data) - 1] != _END:
-            raise SMEncoding("END")
-
-        _decoded_data = self.__decoding(_encoded_data[1 : len(_encoded_data) - 1])
-
-        self.__value = _decoded_data
+        _decoded_data = self.__decoding(_encoded_data[1:-1])
 
         if not mutex:
             self.__semaphore.release()
@@ -333,14 +336,10 @@ class SharedMemory:
                 return False
 
         try:
-            _encoded_data = []
             self.__mapfile.seek(0)
+            _encoded_data = self.__mapfile.read()
 
-            _encoded_data.append(self.__mapfile.read_byte())
-            _encoded_data.append(self.__mapfile.read_byte())
-            _encoded_data.append(self.__mapfile.read_byte())
-
-            return _encoded_data != [_BEGIN, _CLOSED, _END]
+            return _encoded_data[:3] != _BEGIN + _CLOSED + _END
         except:
             return False
 
@@ -368,19 +367,32 @@ class SharedMemory:
         if self.__size is None:
             self.__size = sys.getsizeof(self.__encoding(self.__value))
 
+        _page_size = mmap.ALLOCATIONGRANULARITY
+        self.__size = ((self.__size + _page_size - 1) // _page_size) * _page_size
+
         self.__memory = None
         self.__semaphore = None
         self.__mapfile = None
 
         if self.__client:
             try:
-                self.__memory = posix_ipc.SharedMemory(self.__name_memory, _FLAG, _MODE)
+                try:
+                    posix_ipc.unlink_shared_memory(self.__name_memory)
+                except posix_ipc.ExistentialError:
+                    pass
+
+                self.__memory = posix_ipc.SharedMemory(self.__name_memory, flags=_FLAG, mode=_MODE, size=self.__size)
                 self.__semaphore = posix_ipc.Semaphore(self.__name_semaphore, _FLAG, _MODE, initial_value=1)
-                os.ftruncate(self.__memory.fd, self.__size)
+
+                # os.ftruncate(self.__memory.fd, self.__size)
             except posix_ipc.ExistentialError:
                 if self.__value is not None:
                     self.__memory = posix_ipc.SharedMemory(self.__name_memory)
-                    self.__semaphore = posix_ipc.Semaphore(self.__name_semaphore)
+
+                    try:
+                        self.__semaphore = posix_ipc.Semaphore(self.__name_semaphore)
+                    except posix_ipc.ExistentialError:
+                        self.__semaphore = posix_ipc.Semaphore(self.__name_semaphore, _FLAG, _MODE, initial_value=1)
                 else:
                     self.close()
                     raise SMAlreadyExist(self.__name_memory)
@@ -430,236 +442,123 @@ class SharedMemory:
             value (any): data to encode
 
         """
-        _data = [_BEGIN]
+        _data = _BEGIN
 
-        if type(value) == int or type(value) == numpy.int64:
-            value = int("0b" + self.__convertIF2Bin(value, int), 2)
-            _data.append(_INT)
+        if type(value) == int:
+            _data += _INT + b"\x08" + value.to_bytes(8, "big", signed=True)
 
-            _data.append(8)
-            _data.append((0xFF00000000000000 & value) >> 56)
-            _data.append((0xFF000000000000 & value) >> 48)
-            _data.append((0xFF0000000000 & value) >> 40)
-            _data.append((0xFF00000000 & value) >> 32)
-            _data.append((0xFF000000 & value) >> 24)
-            _data.append((0xFF0000 & value) >> 16)
-            _data.append((0xFF00 & value) >> 8)
-            _data.append((0xFF & value) >> 0)
+        elif type(value) == float:
+            _encoded_float = struct.pack(">d", value)
 
-        elif type(value) == float or type(value) == numpy.float64:
-            value = int("0b" + self.__convertIF2Bin(value, float), 2)
-            _data.append(_FLOAT)
+            _data += _FLOAT + len(_encoded_float).to_bytes(1, byteorder="big") + _encoded_float
 
-            _data.append(8)
-            _data.append((0xFF00000000000000 & value) >> 56)
-            _data.append((0xFF000000000000 & value) >> 48)
-            _data.append((0xFF0000000000 & value) >> 40)
-            _data.append((0xFF00000000 & value) >> 32)
-            _data.append((0xFF000000 & value) >> 24)
-            _data.append((0xFF0000 & value) >> 16)
-            _data.append((0xFF00 & value) >> 8)
-            _data.append((0xFF & value) >> 0)
+        if type(value) == complex:
+            _encoded_cplx = self.__encoding(value.real)[1:-1] + self.__encoding(value.imag)[1:-1]
 
-        if type(value) == complex or type(value) == numpy.complex128:
-            _data.append(_COMPLEX)
-            _data.append(0)
+            _data += _COMPLEX + len(_encoded_cplx).to_bytes(1, byteorder="big") + _encoded_cplx
 
-            _data.extend(self.__encoding(value.real)[1:-1])
-            _data.extend(self.__encoding(value.imag)[1:-1])
+        elif type(value) == bool:
+            _data += _BOOL + b"\x01" + int(value).to_bytes(1, byteorder="big")
 
-            _data[2] = len(_data) - 3
+        elif type(value) == str:
+            _str_encoded = value.encode("utf-8")
 
-        elif type(value) == bool or type(value) == numpy.bool_:
-            _data.append(_BOOL)
-            _data.append(1)
-            _data.append(0xFF & value)
-
-        elif type(value) == str or type(value) == numpy.str_:
-            _data.append(_STR)
-            _data.append(9)
-
-            str_encoded = int(value.encode("utf-8").hex(), 16)
-
-            _data.append((0xFF0000000000000000 & str_encoded) >> 64)
-            _data.append((0xFF00000000000000 & str_encoded) >> 56)
-            _data.append((0xFF000000000000 & str_encoded) >> 48)
-            _data.append((0xFF0000000000 & str_encoded) >> 40)
-            _data.append((0xFF00000000 & str_encoded) >> 32)
-            _data.append((0xFF000000 & str_encoded) >> 24)
-            _data.append((0xFF0000 & str_encoded) >> 16)
-            _data.append((0xFF00 & str_encoded) >> 8)
-            _data.append((0xFF & str_encoded) >> 0)
+            _data += _STR + len(_str_encoded).to_bytes(1, byteorder="big") + _str_encoded
 
         elif type(value) == list or type(value) == tuple:
-            if type(value) == list:
-                _data.append(_LIST)
-            else:
-                _data.append(_TUPLE)
+            _lt_encoded = b""
 
-            _data.append(0)
+            for e in value:
+                _lt_encoded += self.__encoding(e)
 
-            for i in value:
-                _data.extend(self.__encoding(i)[1:-1])
-
-            _data[2] = len(_data) - 3
+            _data += (_LIST if type(value) == list else _TUPLE) + len(_lt_encoded).to_bytes(8, byteorder="big") + _lt_encoded
 
         elif type(value) == dict:
-            _data.append(_DICT)
+            if list(value.keys())[0] == "_LIST":
+                return self.__encoding([0] * value[list(value.keys())[0]])
+            elif list(value.keys())[0] == "_NPARRAY":
+                return self.__encoding(numpy.zeros(value[list(value.keys())[0]][0], dtype=value[list(value.keys())[0]][1]))
+            else:
+                _dict_encoded = b""
 
-            for k in value:
-                _data.extend(self.__encoding(k)[1:-1])
-                _data.extend(self.__encoding(value[k])[1:-1])
+                for k in value:
+                    _dict_encoded += self.__encoding(k)
+                    _dict_encoded += self.__encoding(value[k])
 
-            _data[2:2] = self.__encoding(len(_data) - 2)[1:-1]
+                _data += _DICT + len(_dict_encoded).to_bytes(8, byteorder="big") + _dict_encoded
 
         elif type(value) == numpy.ndarray:
-            _data.append(_NPARRAY)
-            _data.append(0)
+            _encoded_shape = self.__encoding(value.shape)
+            _encoded_dtype = self.__encoding(value.dtype.name)
+            _encoded_np = len(_encoded_shape).to_bytes(8, byteorder="big") + len(_encoded_dtype).to_bytes(1, byteorder="big") + value.tobytes() + _encoded_shape + _encoded_dtype
 
-            for i in value:
-                if type(i) == numpy.ndarray:
-                    i = list(i)
+            _data += _NPARRAY + len(_encoded_np).to_bytes(8, byteorder="big") + _encoded_np
 
-                _data.extend(self.__encoding(i)[1:-1])
-
-            _data[2] = len(_data) - 3
-
-        _data.append(_END)
+        _data += _END
 
         return _data
 
-    def __decoding(self, value: any) -> any:
+    def __decoding(self, value: bytes) -> any:
         """MDecode value.
 
         Args:
             value (any): data to decode
 
         """
-        if value[0] == _INT:
-            _d_data = (value[2] << 56) + (value[3] << 48) + (value[4] << 40) + (value[5] << 32) + (value[6] << 24) + (value[7] << 16) + (value[8] << 8) + (value[9] << 0)
+        if value[0].to_bytes(1, "big") == _INT:
+            _d_data = int.from_bytes(value[2 : value[1] + 2], "big", signed=True)
 
-            _d_data = self.__convertBin2IF(bin(_d_data), int)
+        elif value[0].to_bytes(1, "big") == _FLOAT:
+            _d_data = struct.unpack(">d", value[2 : value[1] + 2])[0]
 
-        elif value[0] == _FLOAT:
-            _d_data = (value[2] << 56) + (value[3] << 48) + (value[4] << 40) + (value[5] << 32) + (value[6] << 24) + (value[7] << 16) + (value[8] << 8) + (value[9] << 0)
+        elif value[0].to_bytes(1, "big") == _COMPLEX:
+            _d_data = complex(self.__decoding(value[2 : value[3] + 4]), self.__decoding(value[value[3] + 4 : value[3] + 4 + value[value[3] + 6]]))
 
-            _d_data = self.__convertBin2IF(bin(_d_data), float)
-
-        elif value[0] == _COMPLEX:
-            value = value[2:]
-            _d_data = []
-            c_type = value[0]
-
-            while len(value) != 0:
-                new_data = value[: 2 + value[1]]
-                value = value[2 + value[1] :]
-                _d_data.append(self.__decoding(new_data))
-
-            _d_data = complex(_d_data[0], _d_data[1])
-
-        elif value[0] == _BOOL:
+        elif value[0].to_bytes(1, "big") == _BOOL:
             _d_data = bool(value[2])
 
-        elif value[0] == _STR:
-            _d_data = (value[2] << 64) + (value[3] << 56) + (value[4] << 48) + (value[5] << 40) + (value[6] << 32) + (value[7] << 24) + (value[8] << 16) + (value[9] << 8) + (value[10] << 0)
+        elif value[0].to_bytes(1, "big") == _STR:
+            _d_data = value[2 : value[1] + 2].decode("utf-8")
 
-            _d_data = bytearray.fromhex(hex(_d_data)[2:]).decode()
-
-        elif value[0] == _LIST or value[0] == _TUPLE:
+        elif value[0].to_bytes(1, "big") == _LIST or value[0].to_bytes(1, "big") == _TUPLE:
             c_type = value[0]
             _d_data = []
 
             if len(value) != 2:
-                value = value[2:]
+                value = value[9:]
 
                 while len(value) != 0:
-                    new_data = value[: 2 + value[1]]
-                    value = value[2 + value[1] :]
+                    _shift = int.from_bytes(value[2:10], "big") + 10 if value[1].to_bytes(1, "big") in [_NPARRAY, _LIST, _TUPLE, _DICT] else value[2] + 3
+                    new_data = value[1:_shift]
+                    value = value[_shift + 1 :]
                     _d_data.append(self.__decoding(new_data))
 
-            if c_type == _TUPLE:
+            if c_type.to_bytes(1, "big") == _TUPLE:
                 _d_data = tuple(_d_data)
 
-        elif value[0] == _DICT:
-            nb_value = value[1 : value[2] + 3]
-            nb_value = self.__decoding(nb_value)
-            value = value[value[2] + 3 : value[2] + 3 + nb_value]
+        elif value[0].to_bytes(1, "big") == _DICT:
             _d_data = {}
 
-            while len(value) != 0:
-                new_key = value[: value[1] + 2]
-                value = value[value[1] + 2 :]
-
-                if value[0] == 6:
-                    nb_value = self.__decoding(value[1 : value[2] + 3])
-                    new_data = value[: nb_value + value[2] + 3]
-                    value = value[nb_value + value[2] + 3 :]
-                else:
-                    new_data = value[: 2 + value[1]]
-                    value = value[2 + value[1] :]
-
-                _d_data[self.__decoding(new_key)] = self.__decoding(new_data)
-
-        elif value[0] == _NPARRAY:
-            value = value[2:]
-            _d_data = []
-            _type = None
-            _same = True
+            value = value[9:]
 
             while len(value) != 0:
-                new_data = value[: 2 + value[1]]
-                value = value[2 + value[1] :]
+                new_key = self.__decoding(value[1 : value[2] + 3])
+                value = value[value[2] + 4 :]
+                _shift = int.from_bytes(value[2:10], "big") + 10 if value[1].to_bytes(1, "big") in [_NPARRAY, _LIST, _TUPLE, _DICT] else value[2] + 3
+                new_data = self.__decoding(value[1:_shift])
+                _d_data[new_key] = new_data
+                value = value[_shift + 1 :]
 
-                _d = self.__decoding(new_data)
+        elif value[0].to_bytes(1, "big") == _NPARRAY:
+            _size_data = int.from_bytes(value[1:9], "big")
+            _size_shape = int.from_bytes(value[9:17], "big")
+            _data = value[18 : -_size_shape - value[17]]
+            _shape = value[9 + _size_data - _size_shape - value[17] : -value[17]]
+            _type = value[9 + _size_data - value[17] :]
 
-                if _type == None:
-                    _same = True
-                    _type = type(_d)
-                elif _type != type(_d):
-                    _same = False
-
-                _d_data.append(_d)
-
-            _d_data = numpy.array(_d_data)
-
-            if _same and _type == bool:
-                _d_data = _d_data.astype(dtype=bool)
+            _d_data = numpy.frombuffer(_data, dtype=self.__decoding(_type[1:-1])).reshape(self.__decoding(_shape[1:-1]))
 
         return _d_data
-
-    def __convertBin2IF(self, value: int, type: type) -> float:
-        """Convert value to int or float.
-
-        Args:
-            value (int): data to convert
-            type (type): type of the data
-
-        Returns:
-            data converted
-
-        """
-        if type is int:
-            return struct.unpack("q", int(value, 2).to_bytes(8, byteorder="big"))[0]
-
-        return struct.unpack(">d", int(value, 2).to_bytes(8, byteorder="big"))[0]
-
-    def __convertIF2Bin(self, value: any, type: type) -> int:
-        """Convert value to bin.
-
-        Args:
-            value: data to convert
-            type: type of the data
-
-        Returns:
-            int: data converted
-
-        """
-        if type is int:
-            [d] = struct.unpack(">Q", struct.pack("P", value))
-        else:
-            [d] = struct.unpack(">Q", struct.pack(">d", value))
-
-        return f"{d:064b}"
 
     def __initValueByJSON(self, path: str) -> dict:
         """Extract value from a JSON file.

@@ -112,7 +112,7 @@ class TestSharedMemoryClient(unittest.TestCase):
     def test_dict(self) -> None:
         """Test client creation containing a dictionary."""
         try:
-            c = SharedMemory("test5", {"a": 1, "b": np.zeros((64, 38, 3), dtype=np.uint8)}, size=1024, client=True, silent=True)
+            c = SharedMemory("test5", {"a": 1, "b": np.zeros((64, 38, 3), dtype=np.uint8)}, client=True, silent=True)
             res1 = type(c.getValue()) is dict
             res2 = c.getType() is dict
             res3 = c.getValue()["a"] == 1
